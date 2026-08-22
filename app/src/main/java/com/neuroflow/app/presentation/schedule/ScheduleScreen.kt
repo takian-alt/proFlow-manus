@@ -165,7 +165,9 @@ fun ScheduleScreen(
                     allActiveTasks = uiState.allActiveTasks,
                     workDayStart = uiState.workDayStart,
                     workDayEnd = uiState.workDayEnd,
-                    onStartFocus = onNavigateToFocus
+                    energyNow = uiState.energyNow,
+                    onStartFocus = onNavigateToFocus,
+                    onReschedule = viewModel::rescheduleTaskToNextBlock
                 )
             }
             if (uiState.latestUndoableAdjustment != null) {

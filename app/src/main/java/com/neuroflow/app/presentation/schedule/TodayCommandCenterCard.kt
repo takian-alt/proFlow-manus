@@ -26,7 +26,9 @@ fun TodayCommandCenterCard(
     allActiveTasks: List<TaskEntity>,
     workDayStart: Int,
     workDayEnd: Int,
-    onStartFocus: (String) -> Unit
+    energyNow: Int?,
+    onStartFocus: (String) -> Unit,
+    onReschedule: (TaskEntity) -> Unit
 ) {
     val now = System.currentTimeMillis()
     val nextTask = tasksForDay
@@ -68,10 +70,14 @@ fun TodayCommandCenterCard(
                     )
                 }
                 if (nextTask != null) {
-                    Button(onClick = { onStartFocus(nextTask.id) }) { Text("Focus") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(onClick = { onStartFocus(nextTask.id) }) { Text("Focus") }
+                        Button(onClick = { onReschedule(nextTask) }) { Text("Move") }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+            Text("Energy now: ${energyNow?.let { "$it/100" } ?: "Unavailable"}", style = MaterialTheme.typography.bodySmall)
             Text("Schedule risk: $riskLabel", style = MaterialTheme.typography.bodySmall)
             LinearProgressIndicator(
                 progress = { (riskRatio / 1.0f).coerceIn(0f, 1f) },
