@@ -155,3 +155,55 @@ class DurationPredictionEngineTest : StringSpec({
         com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(task) shouldBe 102
     }
 })
+
+
+class AutoSchedulingScenarioTest : StringSpec({
+    fun dayAt(hour: Int, minute: Int = 0): Long = Calendar.getInstance().apply {
+        set(2026, Calendar.APRIL, 27, hour, minute, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    "strict deadline rejects a block that would finish late" {
+        val start = dayAt(17, 45)
+        AutoSchedulingContracts.respectsPlacementConstraints(
+            task = TaskEntity(
+                id = "strict",
+                title = "Strict deadline",
+                deadlineDate = dayAt(18),
+                deadlineType = "STRICT",
+                isHardDeadline = true,
+                estimatedDurationMinutes = 30
+            ),
+            startMillis = start,
+            endMillis = start + 30 * 60_000L,
+            durationMinutes = 30
+        ) shouldBe false
+    }
+
+    "planner avoids a calendar-conflict block" {
+        runTest {
+            val store = mockk<UserPreferencesDataStore>()
+            every { store.preferencesFlow } returns MutableStateFlow(
+                UserPreferences(autoSchedulingEnabled = true, workDayStart = 8, workDayEnd = 12)
+            )
+            val start = dayAt(8)
+            val decision = AutoSchedulingEngine(store).planAutoSchedule(
+                unscheduledTasks = listOf(
+                    TaskEntity(
+                        id = "calendar-task",
+                        title = "Calendar task",
+                        deadlineDate = dayAt(17),
+                        estimatedDurationMinutes = 30,
+                        status = TaskStatus.ACTIVE
+                    )
+                ),
+                nowMillis = dayAt(7),
+                energyScoreFn = { 70 to 0.9f },
+                busySlotStartMillis = setOf(start)
+            ).firstOrNull()
+
+            decision shouldNotBe null
+            decision!!.scheduledStartMillis shouldNotBe start
+        }
+    }
+})

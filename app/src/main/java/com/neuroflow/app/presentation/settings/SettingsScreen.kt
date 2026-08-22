@@ -195,6 +195,18 @@ fun SettingsScreen(
                 SettingsNumberRow("Max deep-work minutes (0 = unlimited)", prefs.autoSchedulingMaxDeepWorkMinutesPerDay, 0, 600) {
                     viewModel.updatePreferences { p -> p.copy(autoSchedulingMaxDeepWorkMinutesPerDay = it) }
                 }
+                SettingsNumberRow("Break after focus minutes", prefs.autoSchedulingBreakAfterCognitiveMinutes, 30, 180) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingBreakAfterCognitiveMinutes = it) }
+                }
+                SettingsNumberRow("Break duration minutes", prefs.autoSchedulingBreakDurationMinutes, 5, 45) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingBreakDurationMinutes = it) }
+                }
+                SettingsNumberRow("Protected rest start minute (-1 = off)", prefs.autoSchedulingProtectedRestStartMinute, -1, 1439) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingProtectedRestStartMinute = it) }
+                }
+                SettingsNumberRow("Protected rest end minute (-1 = off)", prefs.autoSchedulingProtectedRestEndMinute, -1, 1439) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingProtectedRestEndMinute = it) }
+                }
                 SettingsToggleRow(
                     label = "Use Android Calendar",
                     description = "Protect meetings when planning; requires calendar permission",
