@@ -16,6 +16,7 @@ import com.neuroflow.app.domain.model.TaskStatus
 import com.neuroflow.app.domain.repository.EnergyScoreRepository
 import com.neuroflow.app.domain.repository.PeakEnergyRepository
 import com.neuroflow.app.domain.scheduler.AutoSchedulingEngine
+import com.neuroflow.app.domain.scheduler.TaskSplitPlanner
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -102,7 +103,21 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             }
 
             // Query all active tasks for unscheduled and missed scheduled assignments
-            val allTasks = taskRepository.getActiveTasks()
+            var allTasks = taskRepository.getActiveTasks()
+            val splitParents = allTasks.filter(TaskSplitPlanner::shouldSplit)
+            if (splitParents.isNotEmpty()) {
+                val splitParts = splitParents.flatMap(TaskSplitPlanner::createParts)
+                splitParents.forEach { parent ->
+                    taskRepository.update(
+                        parent.copy(
+                            status = TaskStatus.ARCHIVED,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+                taskRepository.insertAll(splitParts)
+                allTasks = allTasks.filterNot { it.id in splitParents.map { parent -> parent.id }.toSet() } + splitParts
+            }
             val nowMillis = System.currentTimeMillis()
             val blockedTaskIds = buildBlockedTaskIds(allTasks)
             val pendingTaskIds = autoScheduleTelemetryDao.getPendingReviews()
