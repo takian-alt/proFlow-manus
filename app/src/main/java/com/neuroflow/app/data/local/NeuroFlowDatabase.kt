@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.neuroflow.app.data.local.dao.EnergyPredictionDao
+import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.dao.GoalDao
 import com.neuroflow.app.data.local.dao.SleepLogDao
 import com.neuroflow.app.data.local.dao.TaskDao
@@ -13,6 +14,7 @@ import com.neuroflow.app.data.local.dao.TimeSessionDao
 import com.neuroflow.app.data.local.dao.UlyssesContractDao
 import com.neuroflow.app.data.local.dao.WoopDao
 import com.neuroflow.app.data.local.entity.EnergyPredictionEntity
+import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.local.entity.GoalEntity
 import com.neuroflow.app.data.local.entity.SleepLogEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
@@ -223,9 +225,51 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE tasks ADD COLUMN earliestStartDate INTEGER")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN earliestStartTime INTEGER")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN preferredWeekdaysMask INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN avoidStartTime INTEGER")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN avoidEndTime INTEGER")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN isHardDeadline INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN canSplit INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN maxSessionLengthMinutes INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN minimumFocusBlockMinutes INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS auto_schedule_telemetry (
+                id TEXT NOT NULL PRIMARY KEY,
+                taskId TEXT NOT NULL,
+                generatedAtMillis INTEGER NOT NULL,
+                horizonDays INTEGER NOT NULL,
+                wasApplied INTEGER NOT NULL,
+                selectedSlotDate INTEGER,
+                selectedSlotTime INTEGER,
+                candidateSlotStartMillisJson TEXT NOT NULL,
+                rejectedCandidateSlotStartMillisJson TEXT NOT NULL,
+                rejectionReason TEXT,
+                assignmentReason TEXT NOT NULL,
+                fitScore REAL NOT NULL,
+                energyMatch REAL NOT NULL,
+                tagFit REAL NOT NULL,
+                deadlineUrgency REAL NOT NULL,
+                confidence REAL NOT NULL,
+                energyScore REAL NOT NULL,
+                deadlinePressure REAL NOT NULL,
+                estimatedDurationMinutes INTEGER NOT NULL,
+                userAdjustment TEXT,
+                outcome TEXT,
+                userFeedbackAtMillis INTEGER
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_auto_schedule_telemetry_taskId ON auto_schedule_telemetry(taskId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_auto_schedule_telemetry_generatedAtMillis ON auto_schedule_telemetry(generatedAtMillis)")
+    }
+}
+
 @Database(
-    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class],
-    version = 17,
+    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class],
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -239,4 +283,5 @@ abstract class NeuroFlowDatabase : RoomDatabase() {
     abstract fun hyperFocusSessionDao(): HyperFocusSessionDao
     abstract fun sleepLogDao(): SleepLogDao
     abstract fun energyPredictionDao(): EnergyPredictionDao
+    abstract fun autoScheduleTelemetryDao(): AutoScheduleTelemetryDao
 }

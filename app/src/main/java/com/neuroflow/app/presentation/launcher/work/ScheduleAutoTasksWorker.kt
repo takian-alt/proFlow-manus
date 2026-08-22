@@ -7,6 +7,8 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkerParameters
 import com.neuroflow.app.data.local.UserPreferencesDataStore
+import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
+import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.repository.TaskRepository
 import com.neuroflow.app.domain.engine.EnergyScoreEngine
 import com.neuroflow.app.domain.model.TaskStatus
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit
  * 1. Query unscheduled, eligible tasks
  * 2. Generate scheduling decisions via AutoSchedulingEngine
  * 3. Apply decisions transactionally to task repository
- * 4. Log telemetry for monitoring and debugging
+ * 4. Persist telemetry for monitoring, explanations, and future learning
  *
  * Gated by:
  * - autoSchedulingEnabled preference
@@ -38,8 +40,10 @@ import java.util.concurrent.TimeUnit
  *
  * Produces:
  * - Updated tasks with scheduledDate/scheduledTime set
- * - Telemetry logs for scheduler monitoring
+ * - Durable telemetry rows for scheduler monitoring and learning
  */
+private const val SCHEDULING_BLOCK_MINUTES = 30
+
 @HiltWorker
 class ScheduleAutoTasksWorker @AssistedInject constructor(
     @Assisted private val context: Context,
@@ -48,7 +52,8 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
     private val autoSchedulingEngine: AutoSchedulingEngine,
     private val preferencesDataStore: UserPreferencesDataStore,
     private val energyScoreRepository: EnergyScoreRepository,
-    private val peakEnergyRepository: PeakEnergyRepository
+    private val peakEnergyRepository: PeakEnergyRepository,
+    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -341,10 +346,16 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             // Persist update
             taskRepository.update(updatedTask)
 
-            // Log telemetry decision as applied
-            logTelemetry(decision.copy(
-                telemetry = decision.telemetry.copy(wasApplied = true)
-            ))
+            // Persist telemetry as applied, then keep the local debug log for diagnostics.
+            val appliedDecision = decision.copy(
+                telemetry = decision.telemetry.copy(
+                    wasApplied = true,
+                    selectedSlotDate = scheduledDate,
+                    selectedSlotTime = scheduledTime
+                )
+            )
+            persistTelemetry(appliedDecision)
+            logTelemetry(appliedDecision)
         }
     }
 
@@ -373,9 +384,36 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
         return dateMillis to timeOffset
     }
 
+    private suspend fun persistTelemetry(decision: AutoSchedulingEngine.ScheduleDecision) {
+        val telemetry = decision.telemetry
+        autoScheduleTelemetryDao.insert(
+            AutoScheduleTelemetryEntity(
+                taskId = telemetry.taskId,
+                generatedAtMillis = telemetry.generatedAtMillis,
+                horizonDays = telemetry.horizonDays,
+                wasApplied = telemetry.wasApplied,
+                selectedSlotDate = telemetry.selectedSlotDate,
+                selectedSlotTime = telemetry.selectedSlotTime,
+                candidateSlotStartMillisJson = telemetry.candidateSlotStartMillis.toJsonArray(),
+                rejectedCandidateSlotStartMillisJson = telemetry.rejectedCandidateSlotStartMillis.toJsonArray(),
+                rejectionReason = telemetry.rejectionReason?.name,
+                assignmentReason = decision.assignmentReason,
+                fitScore = decision.fitScore.overallScore,
+                energyMatch = decision.fitScore.energyMatch,
+                tagFit = decision.fitScore.tagFit,
+                deadlineUrgency = decision.fitScore.deadlineUrgency,
+                confidence = telemetry.inputs.confidence,
+                energyScore = telemetry.inputs.energyScore,
+                deadlinePressure = telemetry.inputs.deadlinePressure,
+                estimatedDurationMinutes = telemetry.inputs.estimatedDurationMinutes
+            )
+        )
+    }
+
+    private fun List<Long>.toJsonArray(): String =
+        joinToString(prefix = "[", postfix = "]") { it.toString() }
+
     private fun logTelemetry(decision: AutoSchedulingEngine.ScheduleDecision) {
-        // In production, send to remote telemetry service
-        // For now, just log locally
         android.util.Log.d(
             "ScheduleAutoTasks",
             "Applied decision: task=${decision.taskId}, slot=${decision.assignedSlotIndex}, " +
@@ -388,9 +426,9 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
         val scheduledTime = task.scheduledTime ?: return emptySet()
         val startMillis = scheduledDate + scheduledTime
 
-        val roundedStart = roundDownToHour(startMillis)
-        val estimated = task.estimatedDurationMinutes.coerceAtLeast(30)
-        val slotCount = ((estimated + 59) / 60).coerceAtLeast(1)
+        val roundedStart = roundDownToSchedulingBlock(startMillis)
+        val estimated = task.estimatedDurationMinutes.coerceAtLeast(SCHEDULING_BLOCK_MINUTES)
+        val slotCount = ((estimated + SCHEDULING_BLOCK_MINUTES - 1) / SCHEDULING_BLOCK_MINUTES).coerceAtLeast(1)
 
         val slots = mutableSetOf<Long>()
 
@@ -400,7 +438,7 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
 
         repeat(slotCount) { idx ->
             slots += cal.timeInMillis
-            cal.add(java.util.Calendar.HOUR_OF_DAY, 1)  // DST-safe hour advancement
+            cal.add(java.util.Calendar.MINUTE, SCHEDULING_BLOCK_MINUTES)  // DST-safe block advancement
         }
         return slots
     }
@@ -416,27 +454,27 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             val startMillis = scheduledDate + scheduledTime
             if (startMillis < nowMillis - 60 * 60 * 1000L) return@forEach
 
-            val roundedStart = roundDownToHour(startMillis)
-            val estimated = task.estimatedDurationMinutes.coerceAtLeast(30)
-            val slotCount = ((estimated + 59) / 60).coerceAtLeast(1)
+            val roundedStart = roundDownToSchedulingBlock(startMillis)
+            val estimated = task.estimatedDurationMinutes.coerceAtLeast(SCHEDULING_BLOCK_MINUTES)
+            val slotCount = ((estimated + SCHEDULING_BLOCK_MINUTES - 1) / SCHEDULING_BLOCK_MINUTES).coerceAtLeast(1)
 
             // FIX #5: Handle midnight boundary correctly
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = roundedStart }
 
             repeat(slotCount) { idx ->
                 busy += cal.timeInMillis
-                cal.add(java.util.Calendar.HOUR_OF_DAY, 1)  // DST-safe hour advancement
+                cal.add(java.util.Calendar.MINUTE, SCHEDULING_BLOCK_MINUTES)  // DST-safe block advancement
             }
         }
         return busy
     }
 
-    private fun roundDownToHour(millis: Long): Long {
-        // FIX #5: DST-safe hour rounding
-        // Calendar.getInstance() respects timezone and DST rules
+    private fun roundDownToSchedulingBlock(millis: Long): Long {
+        // DST-safe 30-minute rounding. Calendar preserves the local timezone rules.
         val cal = java.util.Calendar.getInstance().apply {
             timeInMillis = millis
-            set(java.util.Calendar.MINUTE, 0)
+            val blockMinute = (get(java.util.Calendar.MINUTE) / SCHEDULING_BLOCK_MINUTES) * SCHEDULING_BLOCK_MINUTES
+            set(java.util.Calendar.MINUTE, blockMinute)
             set(java.util.Calendar.SECOND, 0)
             set(java.util.Calendar.MILLISECOND, 0)
         }
