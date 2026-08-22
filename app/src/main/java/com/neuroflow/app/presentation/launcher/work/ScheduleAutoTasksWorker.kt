@@ -104,7 +104,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
 
             // Query all active tasks for unscheduled and missed scheduled assignments
             var allTasks = taskRepository.getActiveTasks()
-            val splitParents = allTasks.filter(TaskSplitPlanner::shouldSplit)
+            val splitParents = allTasks.filter { task ->
+                task.scheduledDate == null &&
+                    task.scheduledTime == null &&
+                    TaskSplitPlanner.shouldSplit(task)
+            }
             if (splitParents.isNotEmpty()) {
                 val splitParts = splitParents.flatMap(TaskSplitPlanner::createParts)
                 splitParents.forEach { parent ->
