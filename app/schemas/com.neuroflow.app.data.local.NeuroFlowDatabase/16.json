@@ -1,0 +1,987 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 16,
+    "identityHash": "f8031d007a8935702b17b7a42c7d9072",
+    "entities": [
+      {
+        "tableName": "tasks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `quadrant` TEXT NOT NULL, `priority` TEXT NOT NULL, `tags` TEXT NOT NULL, `deadlineDate` INTEGER, `deadlineTime` INTEGER, `scheduledDate` INTEGER, `scheduledTime` INTEGER, `isScheduleLocked` INTEGER NOT NULL, `estimatedDurationMinutes` INTEGER NOT NULL, `recurrence` TEXT NOT NULL, `recurrenceIntervalDays` INTEGER NOT NULL, `reminderFlags` INTEGER NOT NULL, `impactScore` INTEGER NOT NULL, `valueScore` INTEGER NOT NULL, `effortScore` INTEGER NOT NULL, `parentTaskId` TEXT, `blockingTaskIds` TEXT NOT NULL, `dependsOnTaskIds` TEXT NOT NULL, `waitingFor` TEXT NOT NULL, `totalTimeTrackedMinutes` REAL NOT NULL, `sessionCount` INTEGER NOT NULL, `lastSessionDurationMinutes` REAL, `actualDurationMinutes` REAL, `estimationErrorMape` REAL, `estimationErrorSmape` REAL, `status` TEXT NOT NULL, `completedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `energyLevel` TEXT NOT NULL, `taskType` TEXT NOT NULL, `contextTag` TEXT NOT NULL, `goalId` TEXT, `ifThenPlan` TEXT NOT NULL, `isHabitual` INTEGER NOT NULL, `habitStreak` INTEGER NOT NULL, `isFrog` INTEGER NOT NULL, `postponeCount` INTEGER NOT NULL, `focusModePoints` INTEGER NOT NULL, `enjoymentScore` INTEGER NOT NULL, `isPublicCommitment` INTEGER NOT NULL, `isAnxietyTask` INTEGER NOT NULL, `goalRiskLevel` INTEGER NOT NULL, `isAutoScheduled` INTEGER NOT NULL, `lastAutoScheduledAt` INTEGER, `habitDate` INTEGER, `affectiveForecastError` REAL, `woopPromptShown` INTEGER NOT NULL, `distractionScore` REAL NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quadrant",
+            "columnName": "quadrant",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priority",
+            "columnName": "priority",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tags",
+            "columnName": "tags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deadlineDate",
+            "columnName": "deadlineDate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "deadlineTime",
+            "columnName": "deadlineTime",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "scheduledDate",
+            "columnName": "scheduledDate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "scheduledTime",
+            "columnName": "scheduledTime",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "isScheduleLocked",
+            "columnName": "isScheduleLocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estimatedDurationMinutes",
+            "columnName": "estimatedDurationMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrence",
+            "columnName": "recurrence",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceIntervalDays",
+            "columnName": "recurrenceIntervalDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reminderFlags",
+            "columnName": "reminderFlags",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "impactScore",
+            "columnName": "impactScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valueScore",
+            "columnName": "valueScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "effortScore",
+            "columnName": "effortScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentTaskId",
+            "columnName": "parentTaskId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "blockingTaskIds",
+            "columnName": "blockingTaskIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dependsOnTaskIds",
+            "columnName": "dependsOnTaskIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "waitingFor",
+            "columnName": "waitingFor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalTimeTrackedMinutes",
+            "columnName": "totalTimeTrackedMinutes",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionCount",
+            "columnName": "sessionCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSessionDurationMinutes",
+            "columnName": "lastSessionDurationMinutes",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "actualDurationMinutes",
+            "columnName": "actualDurationMinutes",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "estimationErrorMape",
+            "columnName": "estimationErrorMape",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "estimationErrorSmape",
+            "columnName": "estimationErrorSmape",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "energyLevel",
+            "columnName": "energyLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taskType",
+            "columnName": "taskType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contextTag",
+            "columnName": "contextTag",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ifThenPlan",
+            "columnName": "ifThenPlan",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isHabitual",
+            "columnName": "isHabitual",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "habitStreak",
+            "columnName": "habitStreak",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFrog",
+            "columnName": "isFrog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "postponeCount",
+            "columnName": "postponeCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "focusModePoints",
+            "columnName": "focusModePoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enjoymentScore",
+            "columnName": "enjoymentScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPublicCommitment",
+            "columnName": "isPublicCommitment",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isAnxietyTask",
+            "columnName": "isAnxietyTask",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalRiskLevel",
+            "columnName": "goalRiskLevel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isAutoScheduled",
+            "columnName": "isAutoScheduled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastAutoScheduledAt",
+            "columnName": "lastAutoScheduledAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "habitDate",
+            "columnName": "habitDate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "affectiveForecastError",
+            "columnName": "affectiveForecastError",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "woopPromptShown",
+            "columnName": "woopPromptShown",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distractionScore",
+            "columnName": "distractionScore",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "time_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `taskId` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER, `pausedAt` INTEGER, `totalPausedMs` INTEGER NOT NULL, `durationMinutes` REAL NOT NULL, `pauseResumeCount` INTEGER NOT NULL, `appSwitchCount` INTEGER NOT NULL, `interruptionBurstCount` INTEGER NOT NULL, `sessionType` TEXT NOT NULL, `pomodoroNumber` INTEGER NOT NULL, `notes` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taskId",
+            "columnName": "taskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "endedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "pausedAt",
+            "columnName": "pausedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalPausedMs",
+            "columnName": "totalPausedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMinutes",
+            "columnName": "durationMinutes",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pauseResumeCount",
+            "columnName": "pauseResumeCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appSwitchCount",
+            "columnName": "appSwitchCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interruptionBurstCount",
+            "columnName": "interruptionBurstCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionType",
+            "columnName": "sessionType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pomodoroNumber",
+            "columnName": "pomodoroNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "goals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `targetDate` INTEGER, `identityStatement` TEXT NOT NULL, `completedTaskCount` INTEGER NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetDate",
+            "columnName": "targetDate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "identityStatement",
+            "columnName": "identityStatement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedTaskCount",
+            "columnName": "completedTaskCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "woop_data",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`taskId` TEXT NOT NULL, `wish` TEXT NOT NULL, `outcome` TEXT NOT NULL, `obstacle` TEXT NOT NULL, `plan` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`taskId`))",
+        "fields": [
+          {
+            "fieldPath": "taskId",
+            "columnName": "taskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wish",
+            "columnName": "wish",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "outcome",
+            "columnName": "outcome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "obstacle",
+            "columnName": "obstacle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "plan",
+            "columnName": "plan",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "taskId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "ulysses_contracts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `taskId` TEXT NOT NULL, `deadlineAt` INTEGER NOT NULL, `consequence` TEXT NOT NULL, `outcome` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taskId",
+            "columnName": "taskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deadlineAt",
+            "columnName": "deadlineAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "consequence",
+            "columnName": "consequence",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "outcome",
+            "columnName": "outcome",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "unlock_codes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `encryptedCode` TEXT NOT NULL, `tier` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `isUsed` INTEGER NOT NULL, `usedAt` INTEGER, `unlockedUntil` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "encryptedCode",
+            "columnName": "encryptedCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tier",
+            "columnName": "tier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isUsed",
+            "columnName": "isUsed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usedAt",
+            "columnName": "usedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "unlockedUntil",
+            "columnName": "unlockedUntil",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "hyperfocus_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `state` TEXT NOT NULL, `blockedPackages` TEXT NOT NULL, `dailyTaskTarget` INTEGER NOT NULL, `tasksCompletedAtStart` INTEGER NOT NULL, `currentTier` TEXT NOT NULL, `fullyUnlockedAt` INTEGER, `endedAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "blockedPackages",
+            "columnName": "blockedPackages",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dailyTaskTarget",
+            "columnName": "dailyTaskTarget",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tasksCompletedAtStart",
+            "columnName": "tasksCompletedAtStart",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentTier",
+            "columnName": "currentTier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullyUnlockedAt",
+            "columnName": "fullyUnlockedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "endedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sleep_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startAt` INTEGER NOT NULL, `endAt` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, `source` TEXT NOT NULL, `notes` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startAt",
+            "columnName": "startAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endAt",
+            "columnName": "endAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMinutes",
+            "columnName": "durationMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sleep_logs_startAt",
+            "unique": false,
+            "columnNames": [
+              "startAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sleep_logs_startAt` ON `${TABLE_NAME}` (`startAt`)"
+          },
+          {
+            "name": "index_sleep_logs_endAt",
+            "unique": false,
+            "columnNames": [
+              "endAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sleep_logs_endAt` ON `${TABLE_NAME}` (`endAt`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "energy_predictions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `predictedAtMillis` INTEGER NOT NULL, `predictedAtDayOfWeek` INTEGER NOT NULL, `predictedAtHourOfDay` INTEGER NOT NULL, `peakDetectionAgeMillis` INTEGER NOT NULL, `sleepLogAgeMillis` INTEGER NOT NULL, `sessionDataAgeMillis` INTEGER NOT NULL, `baselineRawEnergy` REAL NOT NULL, `peakScore` REAL NOT NULL, `fatiguePenalty` REAL NOT NULL, `sleepPressurePoints` INTEGER NOT NULL, `fatiguePercent` INTEGER NOT NULL, `momentAdjustment` REAL NOT NULL, `momentConfidence` REAL NOT NULL, `momentSupportScore` REAL NOT NULL, `momentPressureScore` REAL NOT NULL, `adjustedRawEnergy` REAL NOT NULL, `usableEnergy` INTEGER NOT NULL, `chronotype` TEXT NOT NULL, `wakeUpHour` INTEGER NOT NULL, `peakMinuteOfDay` INTEGER NOT NULL, `peakConfidence` REAL NOT NULL, `recentFocusMinutes` REAL NOT NULL, `recentInterruptionCount` INTEGER NOT NULL, `recentAppSwitchCount` INTEGER NOT NULL, `activeTaskCount` INTEGER NOT NULL, `notificationCount` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "predictedAtMillis",
+            "columnName": "predictedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "predictedAtDayOfWeek",
+            "columnName": "predictedAtDayOfWeek",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "predictedAtHourOfDay",
+            "columnName": "predictedAtHourOfDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peakDetectionAgeMillis",
+            "columnName": "peakDetectionAgeMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepLogAgeMillis",
+            "columnName": "sleepLogAgeMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionDataAgeMillis",
+            "columnName": "sessionDataAgeMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baselineRawEnergy",
+            "columnName": "baselineRawEnergy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peakScore",
+            "columnName": "peakScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatiguePenalty",
+            "columnName": "fatiguePenalty",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepPressurePoints",
+            "columnName": "sleepPressurePoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatiguePercent",
+            "columnName": "fatiguePercent",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentAdjustment",
+            "columnName": "momentAdjustment",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentConfidence",
+            "columnName": "momentConfidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentSupportScore",
+            "columnName": "momentSupportScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentPressureScore",
+            "columnName": "momentPressureScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adjustedRawEnergy",
+            "columnName": "adjustedRawEnergy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usableEnergy",
+            "columnName": "usableEnergy",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chronotype",
+            "columnName": "chronotype",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wakeUpHour",
+            "columnName": "wakeUpHour",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peakMinuteOfDay",
+            "columnName": "peakMinuteOfDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peakConfidence",
+            "columnName": "peakConfidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recentFocusMinutes",
+            "columnName": "recentFocusMinutes",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recentInterruptionCount",
+            "columnName": "recentInterruptionCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recentAppSwitchCount",
+            "columnName": "recentAppSwitchCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activeTaskCount",
+            "columnName": "activeTaskCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notificationCount",
+            "columnName": "notificationCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f8031d007a8935702b17b7a42c7d9072')"
+    ]
+  }
+}

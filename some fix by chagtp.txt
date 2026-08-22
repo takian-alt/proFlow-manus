@@ -1,0 +1,85 @@
+Some Fixes By ChatGPT
+
+Core problem:
+The app feels like a productivity control panel instead of a simple way to start one useful action. Distracted users avoid planning-heavy apps because adding tasks feels like extra work.
+
+Main product direction:
+Stop optimizing planning. Optimize starting.
+
+Target success metric:
+User opens the app and starts a focus session within 30 seconds.
+
+Highest-priority fixes:
+
+1. Fix the broken launcher task CTA
+- The launcher empty state sends ACTION_OPEN_NEW_TASK.
+- MainActivity does not currently handle that action.
+- Result: tapping "Create Task" from the launcher may not open task creation.
+
+2. Replace "Create Task" with "Start a 10-min win"
+- Do not make first-time users fill out a full task form.
+- Ask only: "What are you avoiding right now?"
+- After submit, create the task automatically and open Focus Mode.
+
+3. Add a Quick Start Task flow
+- One text field for task title.
+- Optional duration choices: 2 min, 10 min, 25 min.
+- Primary button: "Start Now".
+- Default quadrant: DO_FIRST.
+- Default estimate: 10 minutes.
+- Default impact: medium/high.
+
+4. Make the launcher open on the action page
+- The first screen should show the current task and start button.
+- Do not default to quotes.
+- Quotes are passive and do not make users act.
+
+5. Require a first task during onboarding
+- Current onboarding can be skipped and leave the user with no useful plan.
+- Onboarding should produce one task and immediately offer to start it.
+
+6. Hide advanced features for new users
+- Hide matrix complexity, scoring details, analytics, tags, priority weights, WOOP, and energy confidence during the first few days.
+- Show only today's task, quick add, start button, and simple progress.
+
+7. Add "Make it smaller"
+- When users resist a task, the app should help shrink it.
+- Example: "Study Kotlin" becomes "Open the file and read 10 lines."
+- This should be a core button, not hidden in task editing.
+
+8. Reward starting, not only finishing
+- Distracted users need reinforcement for beginning.
+- Log and reward:
+  - starting a 2-minute session
+  - returning after distraction
+  - continuing after the first timer
+  - making a task smaller instead of quitting
+
+9. First focus session should be 2 or 10 minutes
+- 25 minutes feels too serious when motivation is low.
+- Use 10 minutes as default.
+- Use 2 minutes for painful or avoided tasks.
+
+10. Make the empty state emotionally direct
+- Bad: "No active tasks. Create your first task to get started."
+- Better: "You do not need a full plan. Write the one thing you are avoiding."
+- CTA: "Start with 10 minutes."
+
+Best first implementation:
+Build a Quick Start card on the launcher:
+
+What are you avoiding right now?
+[ text field ]
+
+[ Start 10-min win ]
+[ Make it tiny ]
+
+On submit:
+- create a DO_FIRST task
+- set estimated duration to 10 minutes
+- open Focus Mode
+- auto-start timer after a short countdown
+
+Product rule:
+The app should not ask, "How do you want to organize your life?"
+It should ask, "What is the next thing? Start now?"

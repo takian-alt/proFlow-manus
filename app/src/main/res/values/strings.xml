@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">proFlow</string>
+    <string name="accessibility_service_description">Hyper Focus blocks distracting apps during focus sessions. Enable this service to use app blocking features.</string>
+    <string name="accessibility_service_summary">Monitors app launches to enforce focus sessions</string>
+    <string name="autonomy_nudge_title">Task not started yet</string>
+    <string name="autonomy_nudge_summary">Pick one: Not ready, or WOOP.</string>
+    <string name="autonomy_nudge_bigtext_task_pending">\"%1$s\" is still pending.</string>
+    <string name="autonomy_nudge_bigtext_not_ready">Not ready: remind me in 1 hour.</string>
+    <string name="autonomy_nudge_bigtext_woop">WOOP: open reflection for avoidance.</string>
+    <string name="autonomy_nudge_action_not_ready">Not ready</string>
+    <string name="autonomy_nudge_action_woop">WOOP</string>
+    <string name="autonomy_snooze_confirmation_title">Reminder snoozed</string>
+    <string name="autonomy_snooze_confirmation_body">We\'ll remind you again in 1 hour.</string>
+</resources>
