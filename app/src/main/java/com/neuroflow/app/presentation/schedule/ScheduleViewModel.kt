@@ -10,6 +10,7 @@ import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.local.entity.ScheduleAdjustmentEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
 import com.neuroflow.app.data.local.entity.timelineStartMinuteOfDay
+import com.neuroflow.app.domain.repository.EnergyScoreRepository
 import com.neuroflow.app.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -25,6 +26,7 @@ data class ScheduleUiState(
     val allActiveTasks: List<TaskEntity> = emptyList(),
     val pendingAutoScheduleReviews: List<AutoScheduleTelemetryEntity> = emptyList(),
     val latestUndoableAdjustment: ScheduleAdjustmentEntity? = null,
+    val energyNow: Int? = null,
     val isLoading: Boolean = true,
     val workDayStart: Int = 8,
     val workDayEnd: Int = 20
@@ -36,7 +38,8 @@ class ScheduleViewModel @Inject constructor(
     private val preferencesDataStore: UserPreferencesDataStore,
     private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
     private val calendarIntegrationRepository: CalendarIntegrationRepository,
-    private val scheduleAdjustmentDao: ScheduleAdjustmentDao
+    private val scheduleAdjustmentDao: ScheduleAdjustmentDao,
+    private val energyScoreRepository: EnergyScoreRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -47,6 +50,7 @@ class ScheduleViewModel @Inject constructor(
         observeAllActive()
         observePendingAutoScheduleReviews()
         observeLatestUndoableAdjustment()
+        observeEnergy()
         observeWorkHours()
     }
 
@@ -54,6 +58,14 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             autoScheduleTelemetryDao.observePending().collect { proposals ->
                 _uiState.update { it.copy(pendingAutoScheduleReviews = proposals) }
+            }
+        }
+    }
+
+    private fun observeEnergy() {
+        viewModelScope.launch {
+            energyScoreRepository.observeEnergy().collect { energy ->
+                _uiState.update { it.copy(energyNow = energy.availableEnergy) }
             }
         }
     }
@@ -124,6 +136,45 @@ class ScheduleViewModel @Inject constructor(
     }
 
     /** Assigns an existing task to a specific hour slot on the selected date. Locked tasks are skipped. */
+    fun rescheduleTaskToNextBlock(task: TaskEntity) {
+        if (task.isScheduleLocked) return
+        viewModelScope.launch {
+            val now = Calendar.getInstance()
+            now.add(Calendar.MINUTE, 30)
+            now.set(Calendar.SECOND, 0)
+            now.set(Calendar.MILLISECOND, 0)
+            now.set(Calendar.MINUTE, (now.get(Calendar.MINUTE) / 30) * 30)
+            val scheduledMillis = now.timeInMillis
+            val dateCal = Calendar.getInstance().apply {
+                timeInMillis = scheduledMillis
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val scheduledDate = dateCal.timeInMillis
+            val updated = task.copy(
+                scheduledDate = scheduledDate,
+                scheduledTime = scheduledMillis - scheduledDate,
+                isAutoScheduled = false,
+                lastAutoScheduledAt = null,
+                updatedAt = System.currentTimeMillis()
+            )
+            taskRepository.update(updated)
+            scheduleAdjustmentDao.insert(
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    previousScheduledDate = task.scheduledDate,
+                    previousScheduledTime = task.scheduledTime,
+                    newScheduledDate = updated.scheduledDate,
+                    newScheduledTime = updated.scheduledTime,
+                    source = "MANUAL",
+                    reason = "today_command_center_reschedule"
+                )
+            )
+        }
+    }
+
     fun scheduleTask(task: TaskEntity, hour: Int) {
         if (task.isScheduleLocked) return
         viewModelScope.launch {
