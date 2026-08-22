@@ -229,12 +229,15 @@ fun NewTaskSheet(
                             customIntervalDays = ui.customIntervalDays,
                             deadlineDate = ui.deadlineDate,
                             deadlineTime = ui.deadlineTime,
+                            deadlineType = ui.deadlineType,
                             scheduledDate = ui.scheduledDate,
                             scheduledTime = ui.scheduledTime,
                             habitDate = ui.habitDate,
                             habitTime = ui.habitTime,
                             reminderFlags = ui.reminderFlags,
                             isScheduleLocked = ui.isScheduleLocked,
+                            canSplit = ui.canSplit,
+                            maxSessionLengthMinutes = ui.maxSessionLengthMinutes,
                             onRecurrenceChange = flowViewModel::updateRecurrence,
                             onCustomIntervalChange = flowViewModel::updateCustomIntervalDays,
                             onDeadlineDateClick = {
@@ -245,6 +248,7 @@ fun NewTaskSheet(
                                 timeTarget = "deadline"
                                 showTimePicker = true
                             },
+                            onDeadlineTypeChange = flowViewModel::updateDeadlineType,
                             onScheduledDateClick = {
                                 dateTarget = "scheduled"
                                 showDatePicker = true
@@ -262,7 +266,9 @@ fun NewTaskSheet(
                                 showTimePicker = true
                             },
                             onReminderFlagsChange = flowViewModel::updateReminderFlags,
-                            onScheduleLockedChange = flowViewModel::updateScheduleLocked
+                            onScheduleLockedChange = flowViewModel::updateScheduleLocked,
+                            onCanSplitChange = flowViewModel::updateCanSplit,
+                            onMaxSessionLengthChange = flowViewModel::updateMaxSessionLength
                         )
 
                         NewTaskFlowStep.RECURRENCE -> RecurrenceStep(
@@ -562,22 +568,28 @@ private fun TimingStep(
     customIntervalDays: Int,
     deadlineDate: Long?,
     deadlineTime: Long?,
+    deadlineType: String,
     scheduledDate: Long?,
     scheduledTime: Long?,
     habitDate: Long?,
     habitTime: Long?,
     reminderFlags: Int,
     isScheduleLocked: Boolean,
+    canSplit: Boolean,
+    maxSessionLengthMinutes: Int,
     onRecurrenceChange: (Recurrence) -> Unit,
     onCustomIntervalChange: (Int) -> Unit,
     onDeadlineDateClick: () -> Unit,
     onDeadlineTimeClick: () -> Unit,
+    onDeadlineTypeChange: (String) -> Unit,
     onScheduledDateClick: () -> Unit,
     onScheduledTimeClick: () -> Unit,
     onHabitDateClick: () -> Unit,
     onHabitTimeClick: () -> Unit,
     onReminderFlagsChange: (Int) -> Unit,
-    onScheduleLockedChange: (Boolean) -> Unit
+    onScheduleLockedChange: (Boolean) -> Unit,
+    onCanSplitChange: (Boolean) -> Unit,
+    onMaxSessionLengthChange: (Int) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -613,6 +625,13 @@ private fun TimingStep(
                 DateChip(deadlineDate, "Date", onDeadlineDateClick)
                 TimeChip(deadlineTime, "Time", onDeadlineTimeClick)
             }
+            DropdownField(
+                label = "Deadline semantics",
+                value = deadlineType.lowercase().replaceFirstChar { it.uppercase() },
+                items = listOf("SOFT", "STRICT", "ASPIRATIONAL"),
+                itemLabel = { it.lowercase().replaceFirstChar { first -> first.uppercase() } },
+                onSelected = onDeadlineTypeChange
+            )
 
             Text("Scheduled", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -627,6 +646,19 @@ private fun TimingStep(
                 )
                 Text("Lock schedule")
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = canSplit, onCheckedChange = onCanSplitChange)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Allow task splitting")
+            }
+            OutlinedTextField(
+                value = if (maxSessionLengthMinutes > 0) maxSessionLengthMinutes.toString() else "",
+                onValueChange = { value -> onMaxSessionLengthChange(value.toIntOrNull() ?: 0) },
+                label = { Text("Maximum session length (minutes)") },
+                placeholder = { Text("0 = planner default") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         } else {
             Text("Recurring start", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
