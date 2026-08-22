@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.neuroflow.app.data.calendar.CalendarIntegrationRepository
 import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
+import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
+import com.neuroflow.app.data.local.entity.ScheduleAdjustmentEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
 import com.neuroflow.app.data.local.entity.timelineStartMinuteOfDay
 import com.neuroflow.app.data.repository.TaskRepository
@@ -22,6 +24,7 @@ data class ScheduleUiState(
     val lockedTasks: List<TaskEntity> = emptyList(),
     val allActiveTasks: List<TaskEntity> = emptyList(),
     val pendingAutoScheduleReviews: List<AutoScheduleTelemetryEntity> = emptyList(),
+    val latestUndoableAdjustment: ScheduleAdjustmentEntity? = null,
     val isLoading: Boolean = true,
     val workDayStart: Int = 8,
     val workDayEnd: Int = 20
@@ -32,7 +35,8 @@ class ScheduleViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val preferencesDataStore: UserPreferencesDataStore,
     private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
-    private val calendarIntegrationRepository: CalendarIntegrationRepository
+    private val calendarIntegrationRepository: CalendarIntegrationRepository,
+    private val scheduleAdjustmentDao: ScheduleAdjustmentDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -42,6 +46,7 @@ class ScheduleViewModel @Inject constructor(
         loadTasksForDate(_uiState.value.selectedDate)
         observeAllActive()
         observePendingAutoScheduleReviews()
+        observeLatestUndoableAdjustment()
         observeWorkHours()
     }
 
@@ -49,6 +54,14 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             autoScheduleTelemetryDao.observePending().collect { proposals ->
                 _uiState.update { it.copy(pendingAutoScheduleReviews = proposals) }
+            }
+        }
+    }
+
+    private fun observeLatestUndoableAdjustment() {
+        viewModelScope.launch {
+            scheduleAdjustmentDao.observeLatestUndoable().collect { adjustment ->
+                _uiState.update { it.copy(latestUndoableAdjustment = adjustment) }
             }
         }
     }
@@ -144,6 +157,17 @@ class ScheduleViewModel @Inject constructor(
                     updatedAt = System.currentTimeMillis()
                 )
             )
+            scheduleAdjustmentDao.insert(
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    previousScheduledDate = task.scheduledDate,
+                    previousScheduledTime = task.scheduledTime,
+                    newScheduledDate = scheduledDate,
+                    newScheduledTime = scheduledTime,
+                    source = "MANUAL",
+                    reason = "manual_schedule"
+                )
+            )
         }
     }
 
@@ -171,6 +195,17 @@ class ScheduleViewModel @Inject constructor(
                     isAutoScheduled = true,
                     lastAutoScheduledAt = now,
                     updatedAt = now
+                )
+            )
+            scheduleAdjustmentDao.insert(
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    previousScheduledDate = task.scheduledDate,
+                    previousScheduledTime = task.scheduledTime,
+                    newScheduledDate = scheduledDate,
+                    newScheduledTime = scheduledTime,
+                    source = "AUTO_APPROVED",
+                    reason = proposal.assignmentReason
                 )
             )
             val prefs = preferencesDataStore.preferencesFlow.first()
@@ -201,6 +236,35 @@ class ScheduleViewModel @Inject constructor(
                 adjustment = "rejected",
                 outcome = "NOT_SCHEDULED",
                 feedbackAtMillis = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun undoLastScheduleAdjustment() {
+        viewModelScope.launch {
+            val adjustment = scheduleAdjustmentDao.observeLatestUndoable().first() ?: return@launch
+            val task = taskRepository.getById(adjustment.taskId) ?: return@launch
+            val now = System.currentTimeMillis()
+            taskRepository.update(
+                task.copy(
+                    scheduledDate = adjustment.previousScheduledDate,
+                    scheduledTime = adjustment.previousScheduledTime,
+                    isAutoScheduled = false,
+                    lastAutoScheduledAt = null,
+                    updatedAt = now
+                )
+            )
+            scheduleAdjustmentDao.markUndone(adjustment.id)
+            scheduleAdjustmentDao.insert(
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    previousScheduledDate = task.scheduledDate,
+                    previousScheduledTime = task.scheduledTime,
+                    newScheduledDate = adjustment.previousScheduledDate,
+                    newScheduledTime = adjustment.previousScheduledTime,
+                    source = "UNDO",
+                    reason = "undo_last_schedule"
+                )
             )
         }
     }

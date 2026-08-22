@@ -167,6 +167,16 @@ fun ScheduleScreen(
                     onStartFocus = onNavigateToFocus
                 )
             }
+            if (uiState.latestUndoableAdjustment != null) {
+                TextButton(
+                    onClick = viewModel::undoLastScheduleAdjustment,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Text("Undo last schedule change")
+                }
+            }
 
             val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             val isToday = isToday(uiState.selectedDate)
