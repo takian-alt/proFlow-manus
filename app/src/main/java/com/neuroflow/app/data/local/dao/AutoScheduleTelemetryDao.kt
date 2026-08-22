@@ -29,6 +29,9 @@ interface AutoScheduleTelemetryDao {
     @Query("SELECT * FROM auto_schedule_telemetry WHERE generatedAtMillis >= :afterMillis ORDER BY generatedAtMillis DESC")
     fun observeAfter(afterMillis: Long): Flow<List<AutoScheduleTelemetryEntity>>
 
+    @Query("UPDATE auto_schedule_telemetry SET selectedSlotDate = :date, selectedSlotTime = :time, userAdjustment = :adjustment WHERE id = :id AND reviewStatus = 'PENDING'")
+    suspend fun updateProposalTime(id: String, date: Long, time: Long, adjustment: String)
+
     @Query("UPDATE auto_schedule_telemetry SET reviewStatus = :reviewStatus, userAdjustment = :adjustment, outcome = :outcome, userFeedbackAtMillis = :feedbackAtMillis WHERE id = :id")
     suspend fun recordFeedback(id: String, reviewStatus: String, adjustment: String?, outcome: String?, feedbackAtMillis: Long)
 
