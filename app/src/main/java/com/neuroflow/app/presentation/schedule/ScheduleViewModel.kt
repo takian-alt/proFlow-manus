@@ -3,6 +3,8 @@ package com.neuroflow.app.presentation.schedule
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neuroflow.app.data.local.UserPreferencesDataStore
+import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
+import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
 import com.neuroflow.app.data.local.entity.timelineStartMinuteOfDay
 import com.neuroflow.app.data.repository.TaskRepository
@@ -17,6 +19,7 @@ data class ScheduleUiState(
     val tasksForDay: List<TaskEntity> = emptyList(),
     val lockedTasks: List<TaskEntity> = emptyList(),
     val allActiveTasks: List<TaskEntity> = emptyList(),
+    val pendingAutoScheduleReviews: List<AutoScheduleTelemetryEntity> = emptyList(),
     val isLoading: Boolean = true,
     val workDayStart: Int = 8,
     val workDayEnd: Int = 20
@@ -25,7 +28,8 @@ data class ScheduleUiState(
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val preferencesDataStore: UserPreferencesDataStore
+    private val preferencesDataStore: UserPreferencesDataStore,
+    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -34,7 +38,16 @@ class ScheduleViewModel @Inject constructor(
     init {
         loadTasksForDate(_uiState.value.selectedDate)
         observeAllActive()
+        observePendingAutoScheduleReviews()
         observeWorkHours()
+    }
+
+    private fun observePendingAutoScheduleReviews() {
+        viewModelScope.launch {
+            autoScheduleTelemetryDao.observePending().collect { proposals ->
+                _uiState.update { it.copy(pendingAutoScheduleReviews = proposals) }
+            }
+        }
     }
 
     private fun observeWorkHours() {
@@ -129,6 +142,58 @@ class ScheduleViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    fun approveAutoScheduleProposal(proposal: AutoScheduleTelemetryEntity) {
+        viewModelScope.launch {
+            val task = taskRepository.getById(proposal.taskId)
+            val scheduledDate = proposal.selectedSlotDate
+            val scheduledTime = proposal.selectedSlotTime
+            if (task == null || task.isScheduleLocked || task.scheduledDate != null || scheduledDate == null || scheduledTime == null) {
+                autoScheduleTelemetryDao.recordFeedback(
+                    id = proposal.id,
+                    reviewStatus = "REJECTED",
+                    adjustment = "stale_or_conflicting_proposal",
+                    outcome = "NOT_APPLIED",
+                    feedbackAtMillis = System.currentTimeMillis()
+                )
+                return@launch
+            }
+
+            val now = System.currentTimeMillis()
+            taskRepository.update(
+                task.copy(
+                    scheduledDate = scheduledDate,
+                    scheduledTime = scheduledTime,
+                    isAutoScheduled = true,
+                    lastAutoScheduledAt = now,
+                    updatedAt = now
+                )
+            )
+            autoScheduleTelemetryDao.recordFeedback(
+                id = proposal.id,
+                reviewStatus = "APPROVED",
+                adjustment = "approved",
+                outcome = "SCHEDULED",
+                feedbackAtMillis = now
+            )
+        }
+    }
+
+    fun rejectAutoScheduleProposal(proposal: AutoScheduleTelemetryEntity) {
+        viewModelScope.launch {
+            autoScheduleTelemetryDao.recordFeedback(
+                id = proposal.id,
+                reviewStatus = "REJECTED",
+                adjustment = "rejected",
+                outcome = "NOT_SCHEDULED",
+                feedbackAtMillis = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun approveAllAutoScheduleProposals() {
+        _uiState.value.pendingAutoScheduleReviews.forEach(::approveAutoScheduleProposal)
     }
 
     /** Inserts a brand-new task (from the NewTaskSheet). */

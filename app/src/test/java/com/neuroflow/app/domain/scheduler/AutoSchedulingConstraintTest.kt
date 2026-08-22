@@ -61,7 +61,7 @@ class AutoSchedulingConstraintTest : StringSpec({
         ) shouldBe false
     }
 
-    "placement constraints reject preferred-weekday mismatch" {
+    "placement constraints accept a preferred weekday" {
         val mondayBit = 1 shl (Calendar.MONDAY - 1)
         val start = dayAt(9)
         AutoSchedulingContracts.respectsPlacementConstraints(

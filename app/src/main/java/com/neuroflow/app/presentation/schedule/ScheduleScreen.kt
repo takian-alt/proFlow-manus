@@ -149,6 +149,16 @@ fun ScheduleScreen(
                 }
             }
 
+            if (uiState.pendingAutoScheduleReviews.isNotEmpty()) {
+                AutoScheduleReviewCard(
+                    proposals = uiState.pendingAutoScheduleReviews,
+                    tasks = uiState.allActiveTasks,
+                    onApproveAll = viewModel::approveAllAutoScheduleProposals,
+                    onApprove = viewModel::approveAutoScheduleProposal,
+                    onReject = viewModel::rejectAutoScheduleProposal
+                )
+            }
+
             val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             val isToday = isToday(uiState.selectedDate)
 
