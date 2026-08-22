@@ -87,6 +87,7 @@ class NewTaskFlowViewModel @Inject constructor(
     }
 
     fun updateDeadlineDate(value: Long?) = _uiState.update { it.copy(deadlineDate = value) }
+    fun updateDeadlineType(value: String) = _uiState.update { it.copy(deadlineType = value) }
     fun updateDeadlineTime(value: Long?) = _uiState.update { it.copy(deadlineTime = value) }
     fun updateScheduledDate(value: Long?) = _uiState.update { it.copy(scheduledDate = value) }
     fun updateScheduledTime(value: Long?) = _uiState.update { it.copy(scheduledTime = value) }
@@ -94,6 +95,8 @@ class NewTaskFlowViewModel @Inject constructor(
     fun updateHabitDate(value: Long?) = _uiState.update { it.copy(habitDate = value) }
     fun updateHabitTime(value: Long?) = _uiState.update { it.copy(habitTime = value) }
     fun updateEstimatedDuration(value: Int) = _uiState.update { it.copy(estimatedDurationMinutes = value) }
+    fun updateCanSplit(value: Boolean) = _uiState.update { it.copy(canSplit = value) }
+    fun updateMaxSessionLength(value: Int) = _uiState.update { it.copy(maxSessionLengthMinutes = value.coerceAtLeast(0)) }
     fun updateImpact(value: Float) = _uiState.update { it.copy(impactScore = value.coerceIn(0f, 100f)) }
     fun updateValue(value: Float) = _uiState.update { it.copy(valueScore = value.coerceIn(0f, 100f)) }
     fun updateEffort(value: Float) = _uiState.update { it.copy(effortScore = value.coerceIn(0f, 100f)) }
@@ -225,6 +228,7 @@ class NewTaskFlowViewModel @Inject constructor(
             habitDate = recurringAnchor,
             deadlineDate = if (state.recurrence == Recurrence.NONE) state.deadlineDate else null,
             deadlineTime = if (state.recurrence == Recurrence.NONE) state.deadlineTime else null,
+            deadlineType = state.deadlineType,
             scheduledDate = if (state.recurrence == Recurrence.NONE) state.scheduledDate else null,
             scheduledTime = if (state.recurrence == Recurrence.NONE) state.scheduledTime else null,
             isAutoScheduled = when {
@@ -244,6 +248,8 @@ class NewTaskFlowViewModel @Inject constructor(
             },
             isScheduleLocked = if (state.recurrence != Recurrence.NONE) true else state.isScheduleLocked,
             estimatedDurationMinutes = state.estimatedDurationMinutes,
+            canSplit = state.canSplit,
+            maxSessionLengthMinutes = state.maxSessionLengthMinutes,
             impactScore = state.impactScore.toInt(),
             valueScore = state.valueScore.toInt(),
             effortScore = state.effortScore.toInt(),
@@ -335,12 +341,15 @@ data class NewTaskFlowUiState(
     val customIntervalDays: Int = 1,
     val deadlineDate: Long? = null,
     val deadlineTime: Long? = null,
+    val deadlineType: String = "SOFT",
     val scheduledDate: Long? = null,
     val scheduledTime: Long? = null,
     val isScheduleLocked: Boolean = false,
     val habitDate: Long? = null,
     val habitTime: Long? = null,
     val estimatedDurationMinutes: Int = 0,
+    val canSplit: Boolean = true,
+    val maxSessionLengthMinutes: Int = 0,
     val impactScore: Float = 50f,
     val valueScore: Float = 50f,
     val effortScore: Float = 50f,
@@ -386,12 +395,15 @@ data class NewTaskFlowUiState(
                 customIntervalDays = task?.recurrenceIntervalDays ?: 1,
                 deadlineDate = task?.deadlineDate,
                 deadlineTime = task?.deadlineTime,
+                deadlineType = task?.deadlineType ?: "SOFT",
                 scheduledDate = task?.scheduledDate,
                 scheduledTime = task?.scheduledTime,
                 isScheduleLocked = task?.isScheduleLocked ?: (recurrence != Recurrence.NONE),
                 habitDate = habitDate,
                 habitTime = habitTime,
                 estimatedDurationMinutes = task?.estimatedDurationMinutes ?: 0,
+                canSplit = task?.canSplit ?: true,
+                maxSessionLengthMinutes = task?.maxSessionLengthMinutes ?: 0,
                 impactScore = (task?.impactScore ?: 50).toFloat(),
                 valueScore = (task?.valueScore ?: 50).toFloat(),
                 effortScore = (task?.effortScore ?: 50).toFloat(),
