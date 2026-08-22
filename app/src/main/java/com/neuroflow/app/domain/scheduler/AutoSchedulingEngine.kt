@@ -187,6 +187,12 @@ class AutoSchedulingEngine @Inject constructor(
         // **Mis-planning prevention: Sort tasks by urgency to assign deadline-critical tasks first**
         val sortedTasks = eligibleTasks.sortedWith(
             compareByDescending<TaskEntity> { priorityLevelScore(it) + impactPriorityBlend(it) }
+                .thenByDescending { if (it.isHabitual && it.habitStreak > 0) 1 else 0 }
+                .thenByDescending {
+                    if (prefs.autoSchedulingMode.equals("RECOVERY", ignoreCase = true) &&
+                        it.energyLevel == com.neuroflow.app.domain.model.EnergyLevel.LOW
+                    ) 1 else 0
+                }
                 .thenBy { it.deadlineDate ?: Long.MAX_VALUE }
         )
 

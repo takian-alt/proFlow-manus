@@ -97,6 +97,10 @@ class TaskRepository @Inject constructor(
     suspend fun insert(task: TaskEntity) {
         taskDao.insert(task)
     }
+
+    suspend fun insertAll(tasks: List<TaskEntity>) {
+        if (tasks.isNotEmpty()) taskDao.insertAll(tasks)
+    }
     suspend fun update(task: TaskEntity) {
         val old = taskDao.getById(task.id)
         taskDao.update(task)

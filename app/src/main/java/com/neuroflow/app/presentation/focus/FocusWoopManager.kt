@@ -1,6 +1,8 @@
 package com.neuroflow.app.presentation.focus
 
 import com.neuroflow.app.data.local.UserPreferencesDataStore
+import com.neuroflow.app.data.local.dao.TaskFeedbackDao
+import com.neuroflow.app.data.local.entity.TaskFeedbackEntity
 import com.neuroflow.app.data.local.entity.WoopEntity
 import com.neuroflow.app.data.repository.TaskRepository
 import com.neuroflow.app.data.repository.WoopRepository
@@ -13,7 +15,8 @@ import javax.inject.Singleton
 class FocusWoopManager @Inject constructor(
     private val woopRepository: WoopRepository,
     private val taskRepository: TaskRepository,
-    private val preferencesDataStore: UserPreferencesDataStore
+    private val preferencesDataStore: UserPreferencesDataStore,
+    private val taskFeedbackDao: TaskFeedbackDao
 ) {
 
     data class WoopLoadResult(
@@ -56,6 +59,19 @@ class FocusWoopManager @Inject constructor(
     suspend fun submitAffordanceRating(taskId: String, rating: Float): Boolean {
         val task = taskRepository.getById(taskId) ?: return false
         taskRepository.update(task.copy(affectiveForecastError = rating, updatedAt = System.currentTimeMillis()))
+        taskFeedbackDao.insert(
+            TaskFeedbackEntity(
+                taskId = taskId,
+                kind = "FOCUS_SCHEDULE",
+                value = rating.toString()
+            )
+        )
+        return true
+    }
+
+    suspend fun recordFeedback(taskId: String, kind: String, value: String): Boolean {
+        if (taskRepository.getById(taskId) == null) return false
+        taskFeedbackDao.insert(TaskFeedbackEntity(taskId = taskId, kind = kind, value = value))
         return true
     }
 }

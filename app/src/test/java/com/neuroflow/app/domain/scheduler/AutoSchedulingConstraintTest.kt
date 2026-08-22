@@ -106,3 +106,52 @@ class AutoSchedulingConstraintTest : StringSpec({
         }
     }
 })
+
+
+class TaskSplitPlannerTest : StringSpec({
+    "splits a long task into linked bounded parts" {
+        val parent = TaskEntity(
+            id = "report",
+            title = "Write report",
+            estimatedDurationMinutes = 180,
+            canSplit = true
+        )
+        val parts = TaskSplitPlanner.createParts(parent)
+        parts.size shouldBe 4
+        parts.sumOf { it.estimatedDurationMinutes } shouldBe 180
+        parts.all { it.parentTaskId == parent.id && !it.canSplit } shouldBe true
+    }
+
+    "does not split short or non-splittable tasks" {
+        val task = TaskEntity(
+            id = "short",
+            title = "Short task",
+            estimatedDurationMinutes = 60,
+            canSplit = false
+        )
+        TaskSplitPlanner.createParts(task) shouldBe listOf(task)
+    }
+})
+
+
+class DurationPredictionEngineTest : StringSpec({
+    "coding tag applies a longer duration multiplier" {
+        val task = TaskEntity(
+            id = "coding",
+            title = "Coding task",
+            tags = "coding",
+            estimatedDurationMinutes = 60
+        )
+        com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(task) shouldBe 97
+    }
+
+    "repeated postponements shorten the next block" {
+        val task = TaskEntity(
+            id = "postponed",
+            title = "Postponed task",
+            estimatedDurationMinutes = 120,
+            postponeCount = 3
+        )
+        com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(task) shouldBe 102
+    }
+})

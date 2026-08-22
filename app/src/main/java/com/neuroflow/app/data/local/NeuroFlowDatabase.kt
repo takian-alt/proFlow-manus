@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.neuroflow.app.data.local.dao.EnergyPredictionDao
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
+import com.neuroflow.app.data.local.dao.TaskFeedbackDao
 import com.neuroflow.app.data.local.dao.GoalDao
 import com.neuroflow.app.data.local.dao.SleepLogDao
 import com.neuroflow.app.data.local.dao.TaskDao
@@ -17,6 +18,7 @@ import com.neuroflow.app.data.local.dao.WoopDao
 import com.neuroflow.app.data.local.entity.EnergyPredictionEntity
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.local.entity.ScheduleAdjustmentEntity
+import com.neuroflow.app.data.local.entity.TaskFeedbackEntity
 import com.neuroflow.app.data.local.entity.GoalEntity
 import com.neuroflow.app.data.local.entity.SleepLogEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
@@ -306,9 +308,25 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS task_feedback (
+                id TEXT NOT NULL PRIMARY KEY,
+                taskId TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                value TEXT NOT NULL,
+                createdAtMillis INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_task_feedback_taskId ON task_feedback(taskId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_task_feedback_createdAtMillis ON task_feedback(createdAtMillis)")
+    }
+}
+
 @Database(
-    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class, ScheduleAdjustmentEntity::class],
-    version = 21,
+    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class, ScheduleAdjustmentEntity::class, TaskFeedbackEntity::class],
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -324,4 +342,5 @@ abstract class NeuroFlowDatabase : RoomDatabase() {
     abstract fun energyPredictionDao(): EnergyPredictionDao
     abstract fun autoScheduleTelemetryDao(): AutoScheduleTelemetryDao
     abstract fun scheduleAdjustmentDao(): ScheduleAdjustmentDao
+    abstract fun taskFeedbackDao(): TaskFeedbackDao
 }

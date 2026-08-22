@@ -155,7 +155,8 @@ fun ScheduleScreen(
                     tasks = uiState.allActiveTasks,
                     onApproveAll = viewModel::approveAllAutoScheduleProposals,
                     onApprove = viewModel::approveAutoScheduleProposal,
-                    onReject = viewModel::rejectAutoScheduleProposal
+                    onReject = viewModel::rejectAutoScheduleProposal,
+                    onShift = viewModel::shiftAutoScheduleProposal
                 )
             }
             if (isToday(uiState.selectedDate)) {
