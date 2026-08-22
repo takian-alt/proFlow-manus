@@ -20,6 +20,7 @@ data class AutoScheduleTelemetryEntity(
     val generatedAtMillis: Long,
     val horizonDays: Int,
     val wasApplied: Boolean,
+    val reviewStatus: String = "PENDING", // PENDING, APPROVED, REJECTED
     val selectedSlotDate: Long? = null,
     val selectedSlotTime: Long? = null,
     val candidateSlotStartMillisJson: String = "[]",

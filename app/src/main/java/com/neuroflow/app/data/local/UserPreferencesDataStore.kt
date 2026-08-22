@@ -64,6 +64,7 @@ data class UserPreferences(
     val autoSchedulingBreakAfterCognitiveMinutes: Int = 90,
     val autoSchedulingBreakDurationMinutes: Int = 15,
     val autoSchedulingBackgroundThrottleMinutes: Int = 30,
+    val autoSchedulingRequiresReview: Boolean = true,
     // Top 3 goals for the year (JSON array)
     val yearlyGoals: List<String> = emptyList(),
     // Top 3 goals for the current week (JSON array)
@@ -189,6 +190,7 @@ class UserPreferencesDataStore @Inject constructor(
         val AUTO_SCHEDULING_BREAK_AFTER_COGNITIVE_MINUTES = intPreferencesKey("auto_scheduling_break_after_cognitive_minutes")
         val AUTO_SCHEDULING_BREAK_DURATION_MINUTES = intPreferencesKey("auto_scheduling_break_duration_minutes")
         val AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES = intPreferencesKey("auto_scheduling_background_throttle_minutes")
+        val AUTO_SCHEDULING_REQUIRES_REVIEW = booleanPreferencesKey("auto_scheduling_requires_review")
         val YEARLY_GOALS = stringPreferencesKey("yearly_goals")
         val WEEKLY_GOALS = stringPreferencesKey("weekly_goals")
         val LAST_YEARLY_GOAL_SHOWN_YEAR = intPreferencesKey("last_yearly_goal_shown_year")
@@ -298,6 +300,7 @@ class UserPreferencesDataStore @Inject constructor(
             autoSchedulingBreakAfterCognitiveMinutes = (prefs[Keys.AUTO_SCHEDULING_BREAK_AFTER_COGNITIVE_MINUTES] ?: 90).coerceIn(30, 180),
             autoSchedulingBreakDurationMinutes = (prefs[Keys.AUTO_SCHEDULING_BREAK_DURATION_MINUTES] ?: 15).coerceIn(5, 30),
             autoSchedulingBackgroundThrottleMinutes = (prefs[Keys.AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES] ?: 30).coerceIn(5, 120),
+            autoSchedulingRequiresReview = prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] ?: true,
             yearlyGoals = parseAffirmations(prefs[Keys.YEARLY_GOALS]),
             weeklyGoals = parseAffirmations(prefs[Keys.WEEKLY_GOALS]),
             lastYearlyGoalShownYear = prefs[Keys.LAST_YEARLY_GOAL_SHOWN_YEAR] ?: 0,
@@ -423,6 +426,7 @@ class UserPreferencesDataStore @Inject constructor(
                 autoSchedulingBreakAfterCognitiveMinutes = (prefs[Keys.AUTO_SCHEDULING_BREAK_AFTER_COGNITIVE_MINUTES] ?: 90).coerceIn(30, 180),
                 autoSchedulingBreakDurationMinutes = (prefs[Keys.AUTO_SCHEDULING_BREAK_DURATION_MINUTES] ?: 15).coerceIn(5, 30),
                 autoSchedulingBackgroundThrottleMinutes = (prefs[Keys.AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES] ?: 30).coerceIn(5, 120),
+                autoSchedulingRequiresReview = prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] ?: true,
                 yearlyGoals = parseAffirmations(prefs[Keys.YEARLY_GOALS]),
                 weeklyGoals = parseAffirmations(prefs[Keys.WEEKLY_GOALS]),
                 lastYearlyGoalShownYear = prefs[Keys.LAST_YEARLY_GOAL_SHOWN_YEAR] ?: 0,
@@ -528,6 +532,8 @@ class UserPreferencesDataStore @Inject constructor(
             prefs[Keys.AUTO_SCHEDULING_BREAK_AFTER_COGNITIVE_MINUTES] = updated.autoSchedulingBreakAfterCognitiveMinutes.coerceIn(30, 180)
             prefs[Keys.AUTO_SCHEDULING_BREAK_DURATION_MINUTES] = updated.autoSchedulingBreakDurationMinutes.coerceIn(5, 30)
             prefs[Keys.AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES] = updated.autoSchedulingBackgroundThrottleMinutes.coerceIn(5, 120)
+            prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] = updated.autoSchedulingRequiresReview
+
             prefs[Keys.YEARLY_GOALS] = encodeAffirmations(updated.yearlyGoals)
             prefs[Keys.WEEKLY_GOALS] = encodeAffirmations(updated.weeklyGoals)
             prefs[Keys.LAST_YEARLY_GOAL_SHOWN_YEAR] = updated.lastYearlyGoalShownYear

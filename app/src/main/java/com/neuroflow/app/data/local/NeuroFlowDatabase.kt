@@ -267,9 +267,15 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE auto_schedule_telemetry ADD COLUMN reviewStatus TEXT NOT NULL DEFAULT 'PENDING'")
+    }
+}
+
 @Database(
     entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

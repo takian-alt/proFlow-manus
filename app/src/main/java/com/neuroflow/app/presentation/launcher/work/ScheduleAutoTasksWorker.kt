@@ -103,11 +103,15 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             val allTasks = taskRepository.getActiveTasks()
             val nowMillis = System.currentTimeMillis()
             val blockedTaskIds = buildBlockedTaskIds(allTasks)
+            val pendingTaskIds = autoScheduleTelemetryDao.getPendingReviews()
+                .map { it.taskId }
+                .toSet()
 
-            // Separate tasks into categories
+            // Separate tasks into categories. Pending proposals are withheld until the user
+            // explicitly approves or rejects them, preventing duplicate proposals on each run.
             val unscheduledTasks = allTasks.filter { task ->
                 task.scheduledDate == null && task.scheduledTime == null
-            }.filterNot { it.id in blockedTaskIds }
+            }.filterNot { it.id in blockedTaskIds || it.id in pendingTaskIds }
 
             val busySlotStartMillis = buildBusySlotIndex(allTasks, nowMillis)
 
@@ -136,7 +140,7 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                     task.scheduledTime != null &&
                     task.isAutoScheduled &&  // Only replan auto-scheduled tasks
                     (task.scheduledDate + task.scheduledTime) >= nowMillis
-            }.filterNot { it.id in blockedTaskIds }
+            }.filterNot { it.id in blockedTaskIds || it.id in pendingTaskIds }
 
             val peakDetection = peakEnergyRepository.getPeakEnergyDetection()
 
@@ -226,7 +230,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                 )
             }
             if (missedDecisions.isNotEmpty()) {
-                applyDecisionsTransactionally(missedDecisions, allTasks)
+                applyDecisionsTransactionally(
+                    missedDecisions,
+                    allTasks,
+                    requiresReview = prefs.autoSchedulingRequiresReview
+                )
             }
 
             // Replan existing auto-scheduled tasks if conditions warrant it
@@ -256,7 +264,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                 )
 
                 if (replanDecisions.isNotEmpty()) {
-                    applyDecisionsTransactionally(replanDecisions, allTasks)
+                    applyDecisionsTransactionally(
+                        replanDecisions,
+                        allTasks,
+                        requiresReview = prefs.autoSchedulingRequiresReview
+                    )
                 }
             }
 
@@ -277,7 +289,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             }
 
             // Apply decisions transactionally
-            applyDecisionsTransactionally(decisions, allTasks)
+            applyDecisionsTransactionally(
+                decisions,
+                allTasks,
+                requiresReview = prefs.autoSchedulingRequiresReview
+            )
 
             Result.success()
         } catch (e: Exception) {
@@ -321,7 +337,8 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
 
     private suspend fun applyDecisionsTransactionally(
         decisions: List<AutoSchedulingEngine.ScheduleDecision>,
-        allTasks: List<com.neuroflow.app.data.local.entity.TaskEntity>
+        allTasks: List<com.neuroflow.app.data.local.entity.TaskEntity>,
+        requiresReview: Boolean
     ) {
         val nowMillis = System.currentTimeMillis()
         decisions.forEach { decision ->
@@ -330,6 +347,22 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
 
             // Extract date and time from scheduled start millis
             val (scheduledDate, scheduledTime) = splitMillisToDateAndTime(decision.scheduledStartMillis)
+
+            val proposalDecision = decision.copy(
+                telemetry = decision.telemetry.copy(
+                    selectedSlotDate = scheduledDate,
+                    selectedSlotTime = scheduledTime,
+                    reviewStatus = if (requiresReview) "PENDING" else "APPROVED"
+                )
+            )
+            if (requiresReview) {
+                persistTelemetry(proposalDecision)
+                android.util.Log.i(
+                    "ScheduleAutoTasks",
+                    "Queued review proposal for task=${decision.taskId} at ${decision.scheduledStartMillis}"
+                )
+                return@forEach
+            }
 
             // Update task with scheduled date/time
             // NOTE: Do NOT overwrite estimatedDurationMinutes with decision.estimatedDurationMinutes
@@ -347,12 +380,8 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             taskRepository.update(updatedTask)
 
             // Persist telemetry as applied, then keep the local debug log for diagnostics.
-            val appliedDecision = decision.copy(
-                telemetry = decision.telemetry.copy(
-                    wasApplied = true,
-                    selectedSlotDate = scheduledDate,
-                    selectedSlotTime = scheduledTime
-                )
+            val appliedDecision = proposalDecision.copy(
+                telemetry = proposalDecision.telemetry.copy(wasApplied = true)
             )
             persistTelemetry(appliedDecision)
             logTelemetry(appliedDecision)
@@ -392,6 +421,7 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                 generatedAtMillis = telemetry.generatedAtMillis,
                 horizonDays = telemetry.horizonDays,
                 wasApplied = telemetry.wasApplied,
+                reviewStatus = telemetry.reviewStatus,
                 selectedSlotDate = telemetry.selectedSlotDate,
                 selectedSlotTime = telemetry.selectedSlotTime,
                 candidateSlotStartMillisJson = telemetry.candidateSlotStartMillis.toJsonArray(),
