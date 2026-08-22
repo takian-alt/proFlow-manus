@@ -56,14 +56,20 @@ class FocusWoopManager @Inject constructor(
         return true
     }
 
-    suspend fun submitAffordanceRating(taskId: String, rating: Float): Boolean {
+    suspend fun submitAffordanceRating(taskId: String, feedback: FocusFeedback): Boolean {
         val task = taskRepository.getById(taskId) ?: return false
-        taskRepository.update(task.copy(affectiveForecastError = rating, updatedAt = System.currentTimeMillis()))
-        taskFeedbackDao.insert(
-            TaskFeedbackEntity(
-                taskId = taskId,
-                kind = "FOCUS_SCHEDULE",
-                value = rating.toString()
+        taskRepository.update(
+            task.copy(
+                // Preserve the original affective-forecast field as the schedule-quality signal.
+                affectiveForecastError = feedback.scheduleRating,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+        taskFeedbackDao.insertAll(
+            listOf(
+                TaskFeedbackEntity(taskId, "FOCUS_SCHEDULE", feedback.scheduleRating.toString()),
+                TaskFeedbackEntity(taskId, "FOCUS_TIME", feedback.durationRating.toString()),
+                TaskFeedbackEntity(taskId, "FOCUS_ENERGY", feedback.energyRating.toString())
             )
         )
         return true
