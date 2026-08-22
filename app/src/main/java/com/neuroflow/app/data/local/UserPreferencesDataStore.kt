@@ -65,6 +65,14 @@ data class UserPreferences(
     val autoSchedulingBreakDurationMinutes: Int = 15,
     val autoSchedulingBackgroundThrottleMinutes: Int = 30,
     val autoSchedulingRequiresReview: Boolean = true,
+    val autoSchedulingMode: String = "BALANCED",
+    val autoSchedulingBufferPercent: Int = 30,
+    val autoSchedulingMaxTasksPerDay: Int = 0,
+    val autoSchedulingMaxDeepWorkMinutesPerDay: Int = 0,
+    val autoSchedulingProtectedRestStartMinute: Int = -1,
+    val autoSchedulingProtectedRestEndMinute: Int = -1,
+    val calendarIntegrationEnabled: Boolean = false,
+    val calendarExportAcceptedSchedules: Boolean = false,
     // Top 3 goals for the year (JSON array)
     val yearlyGoals: List<String> = emptyList(),
     // Top 3 goals for the current week (JSON array)
@@ -191,6 +199,14 @@ class UserPreferencesDataStore @Inject constructor(
         val AUTO_SCHEDULING_BREAK_DURATION_MINUTES = intPreferencesKey("auto_scheduling_break_duration_minutes")
         val AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES = intPreferencesKey("auto_scheduling_background_throttle_minutes")
         val AUTO_SCHEDULING_REQUIRES_REVIEW = booleanPreferencesKey("auto_scheduling_requires_review")
+        val AUTO_SCHEDULING_MODE = stringPreferencesKey("auto_scheduling_mode")
+        val AUTO_SCHEDULING_BUFFER_PERCENT = intPreferencesKey("auto_scheduling_buffer_percent")
+        val AUTO_SCHEDULING_MAX_TASKS_PER_DAY = intPreferencesKey("auto_scheduling_max_tasks_per_day")
+        val AUTO_SCHEDULING_MAX_DEEP_WORK_MINUTES_PER_DAY = intPreferencesKey("auto_scheduling_max_deep_work_minutes_per_day")
+        val AUTO_SCHEDULING_PROTECTED_REST_START_MINUTE = intPreferencesKey("auto_scheduling_protected_rest_start_minute")
+        val AUTO_SCHEDULING_PROTECTED_REST_END_MINUTE = intPreferencesKey("auto_scheduling_protected_rest_end_minute")
+        val CALENDAR_INTEGRATION_ENABLED = booleanPreferencesKey("calendar_integration_enabled")
+        val CALENDAR_EXPORT_ACCEPTED_SCHEDULES = booleanPreferencesKey("calendar_export_accepted_schedules")
         val YEARLY_GOALS = stringPreferencesKey("yearly_goals")
         val WEEKLY_GOALS = stringPreferencesKey("weekly_goals")
         val LAST_YEARLY_GOAL_SHOWN_YEAR = intPreferencesKey("last_yearly_goal_shown_year")
@@ -427,6 +443,14 @@ class UserPreferencesDataStore @Inject constructor(
                 autoSchedulingBreakDurationMinutes = (prefs[Keys.AUTO_SCHEDULING_BREAK_DURATION_MINUTES] ?: 15).coerceIn(5, 30),
                 autoSchedulingBackgroundThrottleMinutes = (prefs[Keys.AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES] ?: 30).coerceIn(5, 120),
                 autoSchedulingRequiresReview = prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] ?: true,
+                autoSchedulingMode = prefs[Keys.AUTO_SCHEDULING_MODE] ?: "BALANCED",
+                autoSchedulingBufferPercent = (prefs[Keys.AUTO_SCHEDULING_BUFFER_PERCENT] ?: 30).coerceIn(0, 80),
+                autoSchedulingMaxTasksPerDay = (prefs[Keys.AUTO_SCHEDULING_MAX_TASKS_PER_DAY] ?: 0).coerceAtLeast(0),
+                autoSchedulingMaxDeepWorkMinutesPerDay = (prefs[Keys.AUTO_SCHEDULING_MAX_DEEP_WORK_MINUTES_PER_DAY] ?: 0).coerceAtLeast(0),
+                autoSchedulingProtectedRestStartMinute = (prefs[Keys.AUTO_SCHEDULING_PROTECTED_REST_START_MINUTE] ?: -1).coerceIn(-1, 1_439),
+                autoSchedulingProtectedRestEndMinute = (prefs[Keys.AUTO_SCHEDULING_PROTECTED_REST_END_MINUTE] ?: -1).coerceIn(-1, 1_440),
+                calendarIntegrationEnabled = prefs[Keys.CALENDAR_INTEGRATION_ENABLED] ?: false,
+                calendarExportAcceptedSchedules = prefs[Keys.CALENDAR_EXPORT_ACCEPTED_SCHEDULES] ?: false,
                 yearlyGoals = parseAffirmations(prefs[Keys.YEARLY_GOALS]),
                 weeklyGoals = parseAffirmations(prefs[Keys.WEEKLY_GOALS]),
                 lastYearlyGoalShownYear = prefs[Keys.LAST_YEARLY_GOAL_SHOWN_YEAR] ?: 0,
@@ -532,7 +556,15 @@ class UserPreferencesDataStore @Inject constructor(
             prefs[Keys.AUTO_SCHEDULING_BREAK_AFTER_COGNITIVE_MINUTES] = updated.autoSchedulingBreakAfterCognitiveMinutes.coerceIn(30, 180)
             prefs[Keys.AUTO_SCHEDULING_BREAK_DURATION_MINUTES] = updated.autoSchedulingBreakDurationMinutes.coerceIn(5, 30)
             prefs[Keys.AUTO_SCHEDULING_BACKGROUND_THROTTLE_MINUTES] = updated.autoSchedulingBackgroundThrottleMinutes.coerceIn(5, 120)
-            prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] = updated.autoSchedulingRequiresReview
+                prefs[Keys.AUTO_SCHEDULING_REQUIRES_REVIEW] = updated.autoSchedulingRequiresReview
+                prefs[Keys.AUTO_SCHEDULING_MODE] = updated.autoSchedulingMode
+                prefs[Keys.AUTO_SCHEDULING_BUFFER_PERCENT] = updated.autoSchedulingBufferPercent.coerceIn(0, 80)
+                prefs[Keys.AUTO_SCHEDULING_MAX_TASKS_PER_DAY] = updated.autoSchedulingMaxTasksPerDay.coerceAtLeast(0)
+                prefs[Keys.AUTO_SCHEDULING_MAX_DEEP_WORK_MINUTES_PER_DAY] = updated.autoSchedulingMaxDeepWorkMinutesPerDay.coerceAtLeast(0)
+                prefs[Keys.AUTO_SCHEDULING_PROTECTED_REST_START_MINUTE] = updated.autoSchedulingProtectedRestStartMinute.coerceIn(-1, 1_439)
+                prefs[Keys.AUTO_SCHEDULING_PROTECTED_REST_END_MINUTE] = updated.autoSchedulingProtectedRestEndMinute.coerceIn(-1, 1_440)
+                prefs[Keys.CALENDAR_INTEGRATION_ENABLED] = updated.calendarIntegrationEnabled
+                prefs[Keys.CALENDAR_EXPORT_ACCEPTED_SCHEDULES] = updated.calendarExportAcceptedSchedules
 
             prefs[Keys.YEARLY_GOALS] = encodeAffirmations(updated.yearlyGoals)
             prefs[Keys.WEEKLY_GOALS] = encodeAffirmations(updated.weeklyGoals)

@@ -51,6 +51,20 @@ enum class TaskType {
     PHYSICAL
 }
 
+enum class DeadlineType {
+    STRICT,
+    SOFT,
+    ASPIRATIONAL
+}
+
+enum class SchedulingMode {
+    CONSERVATIVE,
+    BALANCED,
+    AGGRESSIVE,
+    RECOVERY,
+    DEEP_WORK
+}
+
 enum class HyperFocusState {
     INACTIVE,
     ACTIVE,

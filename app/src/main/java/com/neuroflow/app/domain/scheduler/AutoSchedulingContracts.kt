@@ -43,12 +43,13 @@ object AutoSchedulingContracts {
             date + (task.earliestStartTime ?: 0L)
         }
         if (earliestStartMillis != null && startMillis < earliestStartMillis) return false
+        if (task.startByDate != null && startMillis > task.startByDate) return false
 
-        val weekdayMask = task.preferredWeekdaysMask and 0x7F
-        if (weekdayMask != 0) {
-            val weekdayBit = 1 shl (startCalendar.get(Calendar.DAY_OF_WEEK) - 1)
-            if (weekdayMask and weekdayBit == 0) return false
-        }
+        val weekdayBit = 1 shl (startCalendar.get(Calendar.DAY_OF_WEEK) - 1)
+        val preferredWeekdayMask = task.preferredWeekdaysMask and 0x7F
+        if (preferredWeekdayMask != 0 && preferredWeekdayMask and weekdayBit == 0) return false
+        val avoidWeekdayMask = task.avoidWeekdaysMask and 0x7F
+        if (avoidWeekdayMask != 0 && avoidWeekdayMask and weekdayBit != 0) return false
 
         val avoidStart = task.avoidStartTime
         val avoidEnd = task.avoidEndTime

@@ -24,6 +24,8 @@ data class TaskEntity(
     // Timing
     val deadlineDate: Long? = null,
     val deadlineTime: Long? = null,
+    val deadlineType: String = "SOFT", // STRICT, SOFT, ASPIRATIONAL
+    val startByDate: Long? = null,
     val scheduledDate: Long? = null,
     val scheduledTime: Long? = null,
     val isScheduleLocked: Boolean = false,
@@ -32,12 +34,15 @@ data class TaskEntity(
     val earliestStartDate: Long? = null,
     val earliestStartTime: Long? = null,
     val preferredWeekdaysMask: Int = 0, // bit 0 = Sunday ... bit 6 = Saturday; 0 = any day
+    val avoidWeekdaysMask: Int = 0, // bit 0 = Sunday ... bit 6 = Saturday; 0 = no blocked days
     val avoidStartTime: Long? = null,
     val avoidEndTime: Long? = null,
     val isHardDeadline: Boolean = false,
     val canSplit: Boolean = true,
     val maxSessionLengthMinutes: Int = 0,
     val minimumFocusBlockMinutes: Int = 0,
+    val doBeforeTaskIds: String = "",
+    val doAfterTaskIds: String = "",
     val recurrence: Recurrence = Recurrence.NONE,
     val recurrenceIntervalDays: Int = 1, // used when recurrence == CUSTOM
 
