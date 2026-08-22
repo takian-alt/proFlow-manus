@@ -1,0 +1,50 @@
+# Baseline Profile for proFlow Launcher
+# Generated to pre-compile critical launcher code paths
+# This eliminates JIT warm-up jank on first launch
+
+# LauncherActivity cold start
+Lcom/neuroflow/app/presentation/launcher/LauncherActivity;
+Lcom/neuroflow/app/presentation/launcher/LauncherActivityKt;
+
+# LauncherViewModel initialization
+Lcom/neuroflow/app/presentation/launcher/LauncherViewModel;
+
+# AppRepository and icon loading
+Lcom/neuroflow/app/presentation/launcher/data/AppRepository;
+Lcom/neuroflow/app/presentation/launcher/data/AppRepository$loadAll$1;
+
+# FocusTaskCard composition
+Lcom/neuroflow/app/presentation/launcher/components/FocusTaskCardKt;
+Lcom/neuroflow/app/presentation/launcher/components/FocusTaskCard;
+
+# AppDrawer open and scroll
+Lcom/neuroflow/app/presentation/launcher/drawer/AppDrawerKt;
+Lcom/neuroflow/app/presentation/launcher/drawer/AppDrawer;
+
+# DockRow and icon rendering
+Lcom/neuroflow/app/presentation/launcher/components/DockRowKt;
+Lcom/neuroflow/app/presentation/launcher/components/AppIconKt;
+
+# Icon loading and caching
+Lcom/neuroflow/app/presentation/launcher/domain/AdaptiveIconProcessor;
+
+# HomeScreen layout
+Lcom/neuroflow/app/presentation/launcher/HomeScreenKt;
+
+# HabitQuickRow
+Lcom/neuroflow/app/presentation/launcher/components/HabitQuickRowKt;
+
+# DateTimeDisplay
+Lcom/neuroflow/app/presentation/launcher/components/DateTimeDisplayKt;
+
+# QuickStatsPanel
+Lcom/neuroflow/app/presentation/launcher/stats/QuickStatsPanelKt;
+
+# TaskScoringEngine (critical for top task calculation)
+Lcom/neuroflow/app/domain/engine/TaskScoringEngine;
+
+# PinnedAppsDataStore
+Lcom/neuroflow/app/presentation/launcher/data/PinnedAppsDataStore;
+
+# NotificationBadgeService
+Lcom/neuroflow/app/presentation/launcher/data/NotificationBadgeService;

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">proFlow</string>
+    <string name="accessibility_service_description">Hyper Focus blocks distracting apps during focus sessions. Enable this service to use app blocking features.</string>
+    <string name="accessibility_service_summary">Monitors app launches to enforce focus sessions</string>
+</resources>
