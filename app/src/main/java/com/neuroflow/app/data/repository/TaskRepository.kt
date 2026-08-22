@@ -116,6 +116,15 @@ class TaskRepository @Inject constructor(
                old.tags != new.tags ||
                old.taskType != new.taskType ||
                old.energyLevel != new.energyLevel ||
+               old.earliestStartDate != new.earliestStartDate ||
+               old.earliestStartTime != new.earliestStartTime ||
+               old.preferredWeekdaysMask != new.preferredWeekdaysMask ||
+               old.avoidStartTime != new.avoidStartTime ||
+               old.avoidEndTime != new.avoidEndTime ||
+               old.isHardDeadline != new.isHardDeadline ||
+               old.canSplit != new.canSplit ||
+               old.maxSessionLengthMinutes != new.maxSessionLengthMinutes ||
+               old.minimumFocusBlockMinutes != new.minimumFocusBlockMinutes ||
                // Task was unscheduled (manual or incomplete)
                (old.scheduledDate != null && new.scheduledDate == null)
     }
