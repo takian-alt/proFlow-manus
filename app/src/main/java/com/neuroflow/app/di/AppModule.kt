@@ -23,6 +23,7 @@ import com.neuroflow.app.data.local.MIGRATION_16_17
 import com.neuroflow.app.data.local.MIGRATION_17_18
 import com.neuroflow.app.data.local.MIGRATION_18_19
 import com.neuroflow.app.data.local.MIGRATION_19_20
+import com.neuroflow.app.data.local.MIGRATION_20_21
 import com.neuroflow.app.data.local.NeuroFlowDatabase
 import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.GoalDao
@@ -30,6 +31,7 @@ import com.neuroflow.app.data.local.dao.SleepLogDao
 import com.neuroflow.app.data.local.dao.TaskDao
 import com.neuroflow.app.data.local.dao.EnergyPredictionDao
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
+import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
 import com.neuroflow.app.data.local.dao.UlyssesContractDao
 import com.neuroflow.app.data.local.dao.WoopDao
 import com.neuroflow.app.data.repository.UlyssesContractRepository
@@ -72,7 +74,8 @@ object AppModule {
                 MIGRATION_16_17,
                 MIGRATION_17_18,
                 MIGRATION_18_19,
-                MIGRATION_19_20
+                MIGRATION_19_20,
+                MIGRATION_20_21
             )
             .build()
     }
@@ -97,6 +100,9 @@ object AppModule {
 
     @Provides
     fun provideAutoScheduleTelemetryDao(database: NeuroFlowDatabase): AutoScheduleTelemetryDao = database.autoScheduleTelemetryDao()
+
+    @Provides
+    fun provideScheduleAdjustmentDao(database: NeuroFlowDatabase): ScheduleAdjustmentDao = database.scheduleAdjustmentDao()
 
     @Provides
     @Singleton
