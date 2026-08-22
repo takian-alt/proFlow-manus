@@ -210,16 +210,13 @@ class AutoSchedulingEngine @Inject constructor(
                 }
 
                 val deadlineMillis = task.deadlineDate?.plus(task.deadlineTime ?: 0L)
-                if (deadlineMillis != null && slot.startMillis > deadlineMillis) {
+                if (deadlineMillis != null && !isAspirationalDeadline(task) && slot.startMillis > deadlineMillis) {
                     continue
                 }
 
                 // **Mis-planning prevention: Skip slots that are already over-packed**
                 val slotUtilization = calculateSlotUtilization(slot)
-                val utilizationLimit = when (slot.energyProfile.zone) {
-                    EnergyZone.CRITICAL -> 0.50f  // 50% limit for critical energy
-                    else -> 0.70f                  // 70% limit for all other zones
-                }
+                val utilizationLimit = utilizationLimit(slot, prefs)
                 if (slotUtilization > utilizationLimit) { // Leave buffer
                     continue
                 }
@@ -243,9 +240,10 @@ class AutoSchedulingEngine @Inject constructor(
                     continue
                 }
                 val projectedEndMillis = slot.startMillis + realisticDuration * 60_000L
-                if (task.isHardDeadline && deadlineMillis != null && projectedEndMillis > deadlineMillis) {
+                if (isHardDeadline(task) && deadlineMillis != null && projectedEndMillis > deadlineMillis) {
                     continue
                 }
+                if (overlapsProtectedRest(slot.startMillis, projectedEndMillis, prefs)) continue
 
                 val fitScore = scoreTaskSlotFit(
                     task = task,
@@ -264,6 +262,8 @@ class AutoSchedulingEngine @Inject constructor(
         // Greedy assignment: iterate by task urgency and select best viable slot per task.
         val decisions = mutableListOf<ScheduleDecision>()
         val blockedSlotIndices = mutableSetOf<Int>()
+        val assignedTasksByDay = mutableMapOf<Int, Int>()
+        val deepWorkMinutesByDay = mutableMapOf<Int, Int>()
         val highCognitiveMinutesByDay = mutableMapOf<Int, Int>()
         val highCognitiveHoursByDay = mutableMapOf<Int, MutableSet<Int>>()
         // W5 fix: Track cognitive minutes as a session cluster, not per-task.
@@ -317,6 +317,18 @@ class AutoSchedulingEngine @Inject constructor(
                         busySlotStartMillis = busySlotStartMillis,
                         allowCrossDay = isLongRunningTask  // Allow long tasks to span days
                     )
+                ) {
+                    return@forEach
+                }
+
+                if (prefs.autoSchedulingMaxTasksPerDay > 0 &&
+                    (assignedTasksByDay[slot.dayIndex] ?: 0) >= prefs.autoSchedulingMaxTasksPerDay
+                ) {
+                    return@forEach
+                }
+                if (prefs.autoSchedulingMaxDeepWorkMinutesPerDay > 0 &&
+                    isCognitivelyIntense(task) &&
+                    (deepWorkMinutesByDay[slot.dayIndex] ?: 0) + estimatedDuration > prefs.autoSchedulingMaxDeepWorkMinutesPerDay
                 ) {
                     return@forEach
                 }
@@ -423,7 +435,12 @@ class AutoSchedulingEngine @Inject constructor(
                 )
             )
 
-            // Reserve occupied slot-hours for this assignment.
+            assignedTasksByDay[slot.dayIndex] = (assignedTasksByDay[slot.dayIndex] ?: 0) + 1
+            if (isCognitivelyIntense(task)) {
+                deepWorkMinutesByDay[slot.dayIndex] = (deepWorkMinutesByDay[slot.dayIndex] ?: 0) + estimatedDuration
+            }
+
+            // Reserve occupied scheduling blocks for this assignment.
             occupyTaskSlots(
                 slots = horizon.slots,
                 startIndex = fitScore.slotIndex,
@@ -776,6 +793,50 @@ class AutoSchedulingEngine @Inject constructor(
      * Mis-planning prevention: Calculate current slot utilization to prevent over-packing.
      * Returns fraction 0.0-1.0 of capacity used.
      */
+    private fun isHardDeadline(task: TaskEntity): Boolean =
+        task.isHardDeadline || task.deadlineType.equals("STRICT", ignoreCase = true)
+
+    private fun isAspirationalDeadline(task: TaskEntity): Boolean =
+        task.deadlineType.equals("ASPIRATIONAL", ignoreCase = true)
+
+    private fun utilizationLimit(slot: TimeSlot, prefs: UserPreferences): Float {
+        val modeLimit = when (prefs.autoSchedulingMode.uppercase()) {
+            "CONSERVATIVE" -> 0.55f
+            "AGGRESSIVE" -> 0.85f
+            "RECOVERY" -> 0.45f
+            "DEEP_WORK" -> 0.65f
+            else -> 0.70f
+        }
+        val bufferAdjustment = (30 - prefs.autoSchedulingBufferPercent.coerceIn(0, 80)) / 100f
+        val modeLimitWithBuffer = (modeLimit + bufferAdjustment).coerceIn(0.30f, 0.90f)
+        return if (slot.energyProfile.zone == EnergyZone.CRITICAL) {
+            min(0.50f, modeLimitWithBuffer)
+        } else {
+            modeLimitWithBuffer
+        }
+    }
+
+    private fun overlapsProtectedRest(startMillis: Long, endMillis: Long, prefs: UserPreferences): Boolean {
+        val restStart = prefs.autoSchedulingProtectedRestStartMinute
+        val restEnd = prefs.autoSchedulingProtectedRestEndMinute
+        if (restStart !in 0..1_439 || restEnd !in 0..1_440) return false
+
+        val startCalendar = Calendar.getInstance().apply { timeInMillis = startMillis }
+        val endCalendar = Calendar.getInstance().apply { timeInMillis = endMillis }
+        if (startCalendar.get(Calendar.DAY_OF_YEAR) != endCalendar.get(Calendar.DAY_OF_YEAR) ||
+            startCalendar.get(Calendar.YEAR) != endCalendar.get(Calendar.YEAR)
+        ) return true
+
+        val startMinute = startCalendar.get(Calendar.HOUR_OF_DAY) * 60 + startCalendar.get(Calendar.MINUTE)
+        val endMinute = (endCalendar.get(Calendar.HOUR_OF_DAY) * 60 + endCalendar.get(Calendar.MINUTE))
+            .coerceAtMost(1_440)
+        return if (restStart <= restEnd) {
+            startMinute < restEnd && endMinute > restStart
+        } else {
+            startMinute < restEnd || endMinute > restStart
+        }
+    }
+
     private fun calculateSlotUtilization(slot: TimeSlot): Float {
         if (slot.availableCapacityMinutes <= 0) {
             return 1.0f
@@ -792,48 +853,8 @@ class AutoSchedulingEngine @Inject constructor(
      * FIX #6: Cap at 360 minutes (6 hours) instead of 180 to support long-running tasks
      */
     private fun calculateRealisticDuration(task: TaskEntity, slot: TimeSlot): Int {
-        val defaultBase = when {
-            task.effortScore >= 80 -> 60
-            task.effortScore >= 60 -> 45
-            else -> 30
-        }
-
-        val baseEstimate = if (task.estimatedDurationMinutes > 0) {
-            task.estimatedDurationMinutes
-        } else {
-            defaultBase
-        }
-
-        val historicalEstimate = if (task.actualDurationMinutes != null && task.actualDurationMinutes > 0) {
-            ((baseEstimate + task.actualDurationMinutes.toInt()) / 2f).roundToInt()
-        } else {
-            baseEstimate
-        }
-
-        val errorAdjustment = 1.0f + (
-            max(task.estimationErrorMape ?: 0f, task.estimationErrorSmape ?: 0f) / 100f
-        ).coerceIn(0.0f, 1.0f)
-
-        val adjustedEstimate = (historicalEstimate * errorAdjustment).toInt().coerceAtLeast(defaultBase)
-
-        // Task type adjustment: ANALYTICAL tasks take longer, ADMIN tasks are faster
-        val taskTypeMultiplier = when (task.taskType) {
-            com.neuroflow.app.domain.model.TaskType.ANALYTICAL -> 1.15f
-            com.neuroflow.app.domain.model.TaskType.CREATIVE -> 1.10f
-            com.neuroflow.app.domain.model.TaskType.ADMIN -> 0.90f
-            com.neuroflow.app.domain.model.TaskType.PHYSICAL -> 1.0f
-        }
-
-        val energyAdjustment = when (slot.energyProfile.zone) {
-            EnergyZone.PEAK -> 1.0f
-            EnergyZone.HIGH -> 1.1f
-            EnergyZone.MODERATE -> 1.25f
-            EnergyZone.LOW -> 1.45f
-            EnergyZone.CRITICAL -> 1.85f
-        }
-
-        // FIX #6: Increase cap from 180 to 360 minutes (6 hours) for long-running tasks
-        return (adjustedEstimate * taskTypeMultiplier * energyAdjustment).toInt().coerceAtMost(360)
+        val energyScore = slot.availableEnergy
+        return com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(task, energyScore)
     }
 
     private fun estimateRemainingMinutes(task: TaskEntity, timeSpentMinutes: Int): Int {
@@ -1945,16 +1966,19 @@ class AutoSchedulingEngine @Inject constructor(
      * Returns map of task ID to set of dependency IDs.
      */
     private fun buildDependencyGraph(tasks: List<TaskEntity>): Map<String, Set<String>> {
+        val explicitBefore = tasks.associate { task ->
+            task.id to task.doBeforeTaskIds.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+        }
         return tasks.associate { task ->
-            val dependencies = if (task.dependsOnTaskIds.isNotBlank()) {
-                task.dependsOnTaskIds.split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                    .toSet()
-            } else {
-                emptySet()
-            }
-            task.id to dependencies
+            val directDependencies = task.dependsOnTaskIds.split(",")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .toMutableSet()
+            directDependencies += task.doAfterTaskIds.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            directDependencies += explicitBefore
+                .filter { (_, successors) -> task.id in successors }
+                .keys
+            task.id to directDependencies
         }
     }
 

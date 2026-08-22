@@ -158,6 +158,15 @@ fun ScheduleScreen(
                     onReject = viewModel::rejectAutoScheduleProposal
                 )
             }
+            if (isToday(uiState.selectedDate)) {
+                TodayCommandCenterCard(
+                    tasksForDay = uiState.tasksForDay,
+                    allActiveTasks = uiState.allActiveTasks,
+                    workDayStart = uiState.workDayStart,
+                    workDayEnd = uiState.workDayEnd,
+                    onStartFocus = onNavigateToFocus
+                )
+            }
 
             val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             val isToday = isToday(uiState.selectedDate)

@@ -2,6 +2,7 @@ package com.neuroflow.app.presentation.schedule
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.neuroflow.app.data.calendar.CalendarIntegrationRepository
 import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
@@ -10,6 +11,7 @@ import com.neuroflow.app.data.local.entity.timelineStartMinuteOfDay
 import com.neuroflow.app.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
@@ -29,7 +31,8 @@ data class ScheduleUiState(
 class ScheduleViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val preferencesDataStore: UserPreferencesDataStore,
-    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao
+    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
+    private val calendarIntegrationRepository: CalendarIntegrationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -170,6 +173,16 @@ class ScheduleViewModel @Inject constructor(
                     updatedAt = now
                 )
             )
+            val prefs = preferencesDataStore.preferencesFlow.first()
+            if (prefs.calendarIntegrationEnabled && prefs.calendarExportAcceptedSchedules) {
+                calendarIntegrationRepository.createTaskEvent(
+                    task = task.copy(
+                        scheduledDate = scheduledDate,
+                        scheduledTime = scheduledTime
+                    ),
+                    startMillis = scheduledDate + scheduledTime
+                )
+            }
             autoScheduleTelemetryDao.recordFeedback(
                 id = proposal.id,
                 reviewStatus = "APPROVED",

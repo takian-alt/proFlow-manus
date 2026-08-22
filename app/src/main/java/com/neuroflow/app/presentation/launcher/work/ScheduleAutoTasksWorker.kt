@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
+import com.neuroflow.app.data.calendar.CalendarIntegrationRepository
 import com.neuroflow.app.data.repository.TaskRepository
 import com.neuroflow.app.domain.engine.EnergyScoreEngine
 import com.neuroflow.app.domain.model.TaskStatus
@@ -53,7 +54,8 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
     private val preferencesDataStore: UserPreferencesDataStore,
     private val energyScoreRepository: EnergyScoreRepository,
     private val peakEnergyRepository: PeakEnergyRepository,
-    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao
+    private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
+    private val calendarIntegrationRepository: CalendarIntegrationRepository
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -113,7 +115,14 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                 task.scheduledDate == null && task.scheduledTime == null
             }.filterNot { it.id in blockedTaskIds || it.id in pendingTaskIds }
 
-            val busySlotStartMillis = buildBusySlotIndex(allTasks, nowMillis)
+            val taskBusySlotStartMillis = buildBusySlotIndex(allTasks, nowMillis)
+            val calendarBusySlotStartMillis = if (prefs.calendarIntegrationEnabled) {
+                val calendarEnd = nowMillis + prefs.autoSchedulingHorizonDays * 24L * 60L * 60L * 1000L
+                calendarIntegrationRepository.readBusyBlocks(nowMillis, calendarEnd)
+                    .flatMap { block -> buildBusySlotsForRange(block.startMillis, block.endMillis) }
+                    .toSet()
+            } else emptySet()
+            val busySlotStartMillis = taskBusySlotStartMillis + calendarBusySlotStartMillis
 
             // 30-minute post-scheduled-end grace period threshold (30 * 60 * 1000L)
             val THIRTY_MINUTES_MILLIS = 30 * 60_000L
@@ -469,6 +478,21 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
         repeat(slotCount) { idx ->
             slots += cal.timeInMillis
             cal.add(java.util.Calendar.MINUTE, SCHEDULING_BLOCK_MINUTES)  // DST-safe block advancement
+        }
+        return slots
+    }
+
+    private fun buildBusySlotsForRange(startMillis: Long, endMillis: Long): List<Long> {
+        val slots = mutableListOf<Long>()
+        val cal = java.util.Calendar.getInstance().apply {
+            timeInMillis = startMillis
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+            set(java.util.Calendar.MINUTE, (get(java.util.Calendar.MINUTE) / SCHEDULING_BLOCK_MINUTES) * SCHEDULING_BLOCK_MINUTES)
+        }
+        while (cal.timeInMillis < endMillis) {
+            slots += cal.timeInMillis
+            cal.add(java.util.Calendar.MINUTE, SCHEDULING_BLOCK_MINUTES)
         }
         return slots
     }

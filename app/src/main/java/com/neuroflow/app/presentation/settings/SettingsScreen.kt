@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -41,6 +43,9 @@ fun SettingsScreen(
     val peakDetection by viewModel.peakDetection.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
     var showClearTelemetryDialog by remember { mutableStateOf(false) }
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { }
 
     Scaffold(
         topBar = {
@@ -148,6 +153,71 @@ fun SettingsScreen(
                 }
                 SettingsNumberRow("Break (minutes)", prefs.defaultBreakMinutes, 1, 30) {
                     viewModel.updatePreferences { p -> p.copy(defaultBreakMinutes = it) }
+                }
+            }
+
+            SettingsSection("Autoschedule") {
+                SettingsToggleRow(
+                    label = "Enable autoscheduling",
+                    description = "Suggest available blocks around energy, deadlines, dependencies, and buffers",
+                    checked = prefs.autoSchedulingEnabled,
+                    onCheckedChange = { viewModel.updatePreferences { p -> p.copy(autoSchedulingEnabled = it) } }
+                )
+                SettingsToggleRow(
+                    label = "Review before applying",
+                    description = "Queue proposals for approval instead of changing your schedule automatically",
+                    checked = prefs.autoSchedulingRequiresReview,
+                    onCheckedChange = { viewModel.updatePreferences { p -> p.copy(autoSchedulingRequiresReview = it) } }
+                )
+                Text(
+                    "Mode: ${prefs.autoSchedulingMode.replace('_', ' ')}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                TextButton(
+                    onClick = {
+                        val modes = listOf("CONSERVATIVE", "BALANCED", "AGGRESSIVE", "RECOVERY", "DEEP_WORK")
+                        viewModel.updatePreferences { p ->
+                            val index = modes.indexOf(p.autoSchedulingMode).coerceAtLeast(0)
+                            p.copy(autoSchedulingMode = modes[(index + 1) % modes.size])
+                        }
+                    }
+                ) { Text("Change scheduling mode") }
+                SettingsNumberRow("Planning horizon (days)", prefs.autoSchedulingHorizonDays, 1, 7) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingHorizonDays = it) }
+                }
+                SettingsNumberRow("Buffer percentage", prefs.autoSchedulingBufferPercent, 0, 80) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingBufferPercent = it) }
+                }
+                SettingsNumberRow("Max tasks per day (0 = unlimited)", prefs.autoSchedulingMaxTasksPerDay, 0, 30) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingMaxTasksPerDay = it) }
+                }
+                SettingsNumberRow("Max deep-work minutes (0 = unlimited)", prefs.autoSchedulingMaxDeepWorkMinutesPerDay, 0, 600) {
+                    viewModel.updatePreferences { p -> p.copy(autoSchedulingMaxDeepWorkMinutesPerDay = it) }
+                }
+                SettingsToggleRow(
+                    label = "Use Android Calendar",
+                    description = "Protect meetings when planning; requires calendar permission",
+                    checked = prefs.calendarIntegrationEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            calendarPermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.READ_CALENDAR,
+                                    android.Manifest.permission.WRITE_CALENDAR
+                                )
+                            )
+                        }
+                        viewModel.updatePreferences { p -> p.copy(calendarIntegrationEnabled = enabled) }
+                    }
+                )
+                if (prefs.calendarIntegrationEnabled) {
+                    SettingsToggleRow(
+                        label = "Export approved tasks",
+                        description = "Create calendar events only after you approve a proposal",
+                        checked = prefs.calendarExportAcceptedSchedules,
+                        onCheckedChange = { viewModel.updatePreferences { p -> p.copy(calendarExportAcceptedSchedules = it) } }
+                    )
                 }
             }
 
