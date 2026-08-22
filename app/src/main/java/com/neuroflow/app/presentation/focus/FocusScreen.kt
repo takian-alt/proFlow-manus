@@ -934,8 +934,7 @@ fun FocusScreen(
             ) {
                 TextButton(
                     onClick = {
-                        viewModel.skipTask()
-                        uiState.nextTaskId?.let { onNavigateToNextTask(it, viewModel.buildSkippedArg()) } ?: onNavigateBack()
+                        viewModel.requestSkipFeedback()
                     }
                 ) {
                     Text("Skip", fontSize = 16.sp)
@@ -955,6 +954,16 @@ fun FocusScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (uiState.showSkipFeedback) {
+        SkipFeedbackSheet(
+            onReasonSelected = { reason ->
+                viewModel.skipTask(reason)
+                uiState.nextTaskId?.let { onNavigateToNextTask(it, viewModel.buildSkippedArg()) } ?: onNavigateBack()
+            },
+            onDismiss = viewModel::dismissSkipFeedback
+        )
     }
 
     // Manual time log sheet — shown when DONE is tapped with no tracked time

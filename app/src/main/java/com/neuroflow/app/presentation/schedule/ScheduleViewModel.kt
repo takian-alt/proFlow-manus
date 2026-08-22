@@ -171,6 +171,21 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    fun shiftAutoScheduleProposal(proposal: AutoScheduleTelemetryEntity, minutes: Int) {
+        viewModelScope.launch {
+            val date = proposal.selectedSlotDate ?: return@launch
+            val time = proposal.selectedSlotTime ?: return@launch
+            val shiftedMillis = date + time + minutes * 60_000L
+            val (shiftedDate, shiftedTime) = splitMillisToDateAndTime(shiftedMillis)
+            autoScheduleTelemetryDao.updateProposalTime(
+                id = proposal.id,
+                date = shiftedDate,
+                time = shiftedTime,
+                adjustment = if (minutes < 0) "moved_earlier" else "moved_later"
+            )
+        }
+    }
+
     fun approveAutoScheduleProposal(proposal: AutoScheduleTelemetryEntity) {
         viewModelScope.launch {
             val task = taskRepository.getById(proposal.taskId)
@@ -221,7 +236,7 @@ class ScheduleViewModel @Inject constructor(
             autoScheduleTelemetryDao.recordFeedback(
                 id = proposal.id,
                 reviewStatus = "APPROVED",
-                adjustment = "approved",
+                adjustment = listOfNotNull(proposal.userAdjustment, "approved").joinToString(";"),
                 outcome = "SCHEDULED",
                 feedbackAtMillis = now
             )
@@ -233,7 +248,7 @@ class ScheduleViewModel @Inject constructor(
             autoScheduleTelemetryDao.recordFeedback(
                 id = proposal.id,
                 reviewStatus = "REJECTED",
-                adjustment = "rejected",
+                adjustment = listOfNotNull(proposal.userAdjustment, "rejected").joinToString(";"),
                 outcome = "NOT_SCHEDULED",
                 feedbackAtMillis = System.currentTimeMillis()
             )

@@ -1,6 +1,8 @@
 package com.neuroflow.app.presentation.focus
 
 import com.neuroflow.app.data.local.UserPreferencesDataStore
+import com.neuroflow.app.data.local.dao.TaskFeedbackDao
+import com.neuroflow.app.data.local.entity.TaskFeedbackEntity
 import com.neuroflow.app.data.local.entity.TimeSessionEntity
 import com.neuroflow.app.data.repository.SessionRepository
 import com.neuroflow.app.data.repository.TaskRepository
@@ -14,7 +16,8 @@ import javax.inject.Singleton
 class FocusCompletionManager @Inject constructor(
     private val taskRepository: TaskRepository,
     private val sessionRepository: SessionRepository,
-    private val preferencesDataStore: UserPreferencesDataStore
+    private val preferencesDataStore: UserPreferencesDataStore,
+    private val taskFeedbackDao: TaskFeedbackDao
 ) {
 
     data class CompletionOutcome(
@@ -57,6 +60,13 @@ class FocusCompletionManager @Inject constructor(
             updatedAt = now
         )
         taskRepository.completeAndRecur(taskWithFocusData, now)
+        taskFeedbackDao.insert(
+            TaskFeedbackEntity(
+                taskId = taskId,
+                kind = "FOCUS_TIME",
+                value = "actual=${actualDuration.toInt()};estimated=${task.estimatedDurationMinutes}"
+            )
+        )
 
         val newHabitStreak = if (task.recurrence != Recurrence.NONE)
             task.habitStreak + 1 else task.habitStreak

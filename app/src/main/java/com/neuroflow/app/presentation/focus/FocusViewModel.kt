@@ -66,6 +66,7 @@ data class FocusUiState(
     val dreadedTaskInsight: String? = null,
     // Manual time log sheet — shown when DONE is tapped with no tracked time
     val showManualTimeLog: Boolean = false,
+    val showSkipFeedback: Boolean = false,
     val completionAffirmation: String = "",
     val energy: EnergyScoreRepository.EnergyUiModel? = null,
 )
@@ -486,13 +487,23 @@ class FocusViewModel @Inject constructor(
         _uiState.update { it.copy(showCompletionSheet = false, completionAffirmation = "") }
     }
 
-    fun skipTask() {
+    fun requestSkipFeedback() {
+        _uiState.update { it.copy(showSkipFeedback = true) }
+    }
+
+    fun dismissSkipFeedback() {
+        _uiState.update { it.copy(showSkipFeedback = false) }
+    }
+
+    fun skipTask(reason: String = "skipped") {
+        _uiState.update { it.copy(showSkipFeedback = false) }
         skippedTaskIds.add(taskId)
         stopPomodoro()
         viewModelScope.launch {
             val task = taskRepository.getById(taskId)
             task?.let {
                 taskRepository.update(it.copy(postponeCount = it.postponeCount + 1, updatedAt = System.currentTimeMillis()))
+                woopManager.recordFeedback(taskId, "MISSED", reason)
             }
         }
     }

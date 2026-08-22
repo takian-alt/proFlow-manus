@@ -32,7 +32,8 @@ fun AutoScheduleReviewCard(
     tasks: List<TaskEntity>,
     onApproveAll: () -> Unit,
     onApprove: (AutoScheduleTelemetryEntity) -> Unit,
-    onReject: (AutoScheduleTelemetryEntity) -> Unit
+    onReject: (AutoScheduleTelemetryEntity) -> Unit,
+    onShift: (AutoScheduleTelemetryEntity, Int) -> Unit
 ) {
     val taskById = tasks.associateBy { it.id }
     val dateFormat = SimpleDateFormat("EEE, d MMM · h:mm a", Locale.getDefault())
@@ -87,6 +88,12 @@ fun AutoScheduleReviewCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
+                        TextButton(onClick = { onShift(proposal, -30) }) {
+                            Text("Earlier")
+                        }
+                        TextButton(onClick = { onShift(proposal, 30) }) {
+                            Text("Later")
+                        }
                         TextButton(onClick = { onReject(proposal) }) {
                             Text("Reject")
                         }
