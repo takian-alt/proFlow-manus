@@ -11,6 +11,9 @@ interface TaskFeedbackDao {
     @Insert
     suspend fun insert(feedback: TaskFeedbackEntity)
 
+    @Insert
+    suspend fun insertAll(feedback: List<TaskFeedbackEntity>)
+
     @Query("SELECT * FROM task_feedback WHERE taskId = :taskId ORDER BY createdAtMillis DESC")
     fun observeForTask(taskId: String): Flow<List<TaskFeedbackEntity>>
 

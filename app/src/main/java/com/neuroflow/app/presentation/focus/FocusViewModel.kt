@@ -218,10 +218,12 @@ class FocusViewModel @Inject constructor(
         _uiState.update { it.copy(showWoopPrompt = true) }
     }
 
-    fun submitAffordanceRating(rating: Float) {
+    fun submitAffordanceRating(feedback: FocusFeedback) {
         viewModelScope.launch {
-            if (!woopManager.submitAffordanceRating(taskId, rating)) return@launch
-            _uiState.update { it.copy(showAffordanceRating = false, affectiveForecastError = rating) }
+            if (!woopManager.submitAffordanceRating(taskId, feedback)) return@launch
+            _uiState.update {
+                it.copy(showAffordanceRating = false, affectiveForecastError = feedback.scheduleRating)
+            }
         }
     }
 
