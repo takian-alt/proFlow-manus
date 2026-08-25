@@ -8,6 +8,8 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkerParameters
 import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
+import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
+import com.neuroflow.app.data.local.dao.TaskFeedbackDao
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.calendar.CalendarIntegrationRepository
 import com.neuroflow.app.data.repository.TaskRepository
@@ -16,6 +18,7 @@ import com.neuroflow.app.domain.model.TaskStatus
 import com.neuroflow.app.domain.repository.EnergyScoreRepository
 import com.neuroflow.app.domain.repository.PeakEnergyRepository
 import com.neuroflow.app.domain.scheduler.AutoSchedulingEngine
+import com.neuroflow.app.domain.scheduler.CorrectionProfile
 import com.neuroflow.app.domain.scheduler.TaskSplitPlanner
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -56,7 +59,9 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
     private val energyScoreRepository: EnergyScoreRepository,
     private val peakEnergyRepository: PeakEnergyRepository,
     private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
-    private val calendarIntegrationRepository: CalendarIntegrationRepository
+    private val calendarIntegrationRepository: CalendarIntegrationRepository,
+    private val taskFeedbackDao: TaskFeedbackDao,
+    private val scheduleAdjustmentDao: ScheduleAdjustmentDao
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -123,6 +128,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                 allTasks = allTasks.filterNot { it.id in splitParents.map { parent -> parent.id }.toSet() } + splitParts
             }
             val nowMillis = System.currentTimeMillis()
+            val correctionProfile = CorrectionProfile.from(
+                tasks = taskRepository.getAllTasks(),
+                feedback = taskFeedbackDao.getRecent(),
+                adjustments = scheduleAdjustmentDao.getRecent()
+            )
             val blockedTaskIds = buildBlockedTaskIds(allTasks)
             val pendingTaskIds = autoScheduleTelemetryDao.getPendingReviews()
                 .map { it.taskId }
@@ -288,7 +298,8 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                     unscheduledTasks = unscheduledForReplan,
                     nowMillis = nowMillis,
                     energyScoreFn = energyScoreFn,
-                    busySlotStartMillis = busySlotStartMillis - replanSlots
+                    busySlotStartMillis = busySlotStartMillis - replanSlots,
+                    correctionProfile = correctionProfile
                 )
 
                 if (replanDecisions.isNotEmpty()) {
@@ -308,8 +319,9 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             val decisions = autoSchedulingEngine.planAutoSchedule(
                 unscheduledTasks = unscheduledTasks,
                 nowMillis = nowMillis,
-                energyScoreFn = energyScoreFn,
-                busySlotStartMillis = busySlotStartMillis
+                    energyScoreFn = energyScoreFn,
+                    busySlotStartMillis = busySlotStartMillis,
+                    correctionProfile = correctionProfile
             )
 
             if (decisions.isEmpty()) {

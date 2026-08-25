@@ -149,7 +149,8 @@ class AutoSchedulingEngine @Inject constructor(
         unscheduledTasks: List<TaskEntity>,
         nowMillis: Long,
         energyScoreFn: suspend (Long) -> Pair<Int, Float>,
-        busySlotStartMillis: Set<Long> = emptySet()
+        busySlotStartMillis: Set<Long> = emptySet(),
+        correctionProfile: CorrectionProfile = CorrectionProfile()
     ): List<ScheduleDecision> {
         // Build dependency graph once for all tasks (performance optimization)
         val taskMap = unscheduledTasks.associateBy { it.id }
@@ -235,7 +236,7 @@ class AutoSchedulingEngine @Inject constructor(
                     continue // Hard block: extreme mismatch (e.g., ANALYTICAL in CRITICAL)
                 }
 
-                val realisticDuration = calculateRealisticDuration(task, slot)
+                val realisticDuration = calculateRealisticDuration(task, slot, correctionProfile)
                 if (!AutoSchedulingContracts.respectsPlacementConstraints(
                         task = task,
                         startMillis = slot.startMillis,
@@ -259,7 +260,8 @@ class AutoSchedulingEngine @Inject constructor(
                     deadlinePressure = deadlinePressure,
                     prefs = prefs,
                     nowMillis = nowMillis,
-                    energyPenalty = energyPenalty
+                    energyPenalty = energyPenalty,
+                    correctionProfile = correctionProfile
                 )
                 fitScoresByTask.getOrPut(task.id) { mutableListOf() }.add(fitScore)
             }
@@ -309,7 +311,7 @@ class AutoSchedulingEngine @Inject constructor(
                 }
 
                 val slot = horizon.slots[fitScore.slotIndex]
-                val estimatedDuration = calculateRealisticDuration(task, slot)
+                val estimatedDuration = calculateRealisticDuration(task, slot, correctionProfile)
 
                 // FIX #6: Support long-running tasks (>3 hours)
                 // For tasks >3 hours, allow higher utilization limits and cross-day scheduling
@@ -858,9 +860,17 @@ class AutoSchedulingEngine @Inject constructor(
      *
      * FIX #6: Cap at 360 minutes (6 hours) instead of 180 to support long-running tasks
      */
-    private fun calculateRealisticDuration(task: TaskEntity, slot: TimeSlot): Int {
+    private fun calculateRealisticDuration(
+        task: TaskEntity,
+        slot: TimeSlot,
+        correctionProfile: CorrectionProfile = CorrectionProfile()
+    ): Int {
         val energyScore = slot.availableEnergy
-        return com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(task, energyScore)
+        return com.neuroflow.app.domain.engine.DurationPredictionEngine.predictMinutes(
+            task,
+            energyScore,
+            correctionProfile.durationMultiplier(task)
+        )
     }
 
     private fun estimateRemainingMinutes(task: TaskEntity, timeSpentMinutes: Int): Int {
@@ -1184,7 +1194,8 @@ class AutoSchedulingEngine @Inject constructor(
         prefs: UserPreferences,
         nowMillis: Long,
         energyPenalty: Float = 0f,
-        assignedCategoryBySlot: Map<Int, TaskCategory> = emptyMap()
+        assignedCategoryBySlot: Map<Int, TaskCategory> = emptyMap(),
+        correctionProfile: CorrectionProfile = CorrectionProfile()
     ): TaskSlotFitScore {
         var score = 0.0f
 
@@ -1268,6 +1279,11 @@ class AutoSchedulingEngine @Inject constructor(
             tagFit = (avgTagSuitability.toFloat() * 0.75f) + ((avgWindowMatch.toFloat() * avgFragmentation.toFloat()) * 0.25f)
         }
         score += tagFit * 0.04f
+
+        // Learned local correction: reward the hour users repeatedly move this work toward.
+        score += correctionProfile.timeOfDayFit(task, slot.hourOfDay)
+        // Repeated misses/"too big" feedback lowers confidence in fragile late placement.
+        score -= correctionProfile.missRisk(task) * if (slot.hourOfDay >= 17) 0.025f else 0.008f
 
         // 2.5. Smart Category alignment: core behavior category fit (weight: 0.18)
         val categoryFit = calculateCategoryFit(task, slot, prefs)
