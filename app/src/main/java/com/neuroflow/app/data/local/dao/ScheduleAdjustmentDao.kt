@@ -14,6 +14,9 @@ interface ScheduleAdjustmentDao {
     @Query("SELECT * FROM schedule_adjustments WHERE undone = 0 ORDER BY createdAtMillis DESC LIMIT 1")
     fun observeLatestUndoable(): Flow<ScheduleAdjustmentEntity?>
 
+    @Query("SELECT * FROM schedule_adjustments ORDER BY createdAtMillis DESC LIMIT :limit")
+    suspend fun getRecent(limit: Int = 500): List<ScheduleAdjustmentEntity>
+
     @Query("SELECT * FROM schedule_adjustments WHERE taskId = :taskId ORDER BY createdAtMillis DESC LIMIT :limit")
     suspend fun getForTask(taskId: String, limit: Int = 50): List<ScheduleAdjustmentEntity>
 

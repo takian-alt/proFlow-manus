@@ -10,7 +10,11 @@ import kotlin.math.roundToInt
  * history and bounded heuristics so a new user receives a useful estimate without remote ML.
  */
 object DurationPredictionEngine {
-    fun predictMinutes(task: TaskEntity, availableEnergyScore: Int? = null): Int {
+    fun predictMinutes(
+        task: TaskEntity,
+        availableEnergyScore: Int? = null,
+        learnedMultiplier: Float = 1f
+    ): Int {
         val fallback = when {
             task.effortScore >= 80 -> 60
             task.effortScore >= 60 -> 45
@@ -39,7 +43,7 @@ object DurationPredictionEngine {
             else -> 1.0f
         }
         val repeatedMissMultiplier = if (task.postponeCount >= 2) 0.85f else 1.0f
-        return (historyBlend * errorMultiplier * typeMultiplier * tagMultiplier * energyMultiplier * repeatedMissMultiplier)
+        return (historyBlend * errorMultiplier * typeMultiplier * tagMultiplier * energyMultiplier * repeatedMissMultiplier * learnedMultiplier.coerceIn(0.75f, 1.45f))
             .roundToInt()
             .coerceAtLeast(15)
             .coerceAtMost(360)

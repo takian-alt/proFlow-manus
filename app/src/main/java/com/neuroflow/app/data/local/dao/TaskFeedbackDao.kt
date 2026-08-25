@@ -17,6 +17,9 @@ interface TaskFeedbackDao {
     @Query("SELECT * FROM task_feedback WHERE taskId = :taskId ORDER BY createdAtMillis DESC")
     fun observeForTask(taskId: String): Flow<List<TaskFeedbackEntity>>
 
+    @Query("SELECT * FROM task_feedback ORDER BY createdAtMillis DESC LIMIT :limit")
+    suspend fun getRecent(limit: Int = 500): List<TaskFeedbackEntity>
+
     @Query("SELECT * FROM task_feedback WHERE kind = :kind ORDER BY createdAtMillis DESC LIMIT :limit")
     suspend fun getRecentByKind(kind: String, limit: Int = 200): List<TaskFeedbackEntity>
 

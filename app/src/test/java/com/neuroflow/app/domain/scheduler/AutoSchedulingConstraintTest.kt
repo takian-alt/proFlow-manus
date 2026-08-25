@@ -2,7 +2,9 @@ package com.neuroflow.app.domain.scheduler
 
 import com.neuroflow.app.data.local.UserPreferences
 import com.neuroflow.app.data.local.UserPreferencesDataStore
+import com.neuroflow.app.data.local.entity.ScheduleAdjustmentEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
+import com.neuroflow.app.data.local.entity.TaskFeedbackEntity
 import com.neuroflow.app.domain.model.TaskStatus
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -156,6 +158,55 @@ class DurationPredictionEngineTest : StringSpec({
     }
 })
 
+
+class CorrectionProfileTest : StringSpec({
+    "repeated duration feedback increases the learned prediction" {
+        val task = TaskEntity(
+            id = "coding-profile",
+            title = "Coding",
+            tags = "coding",
+            estimatedDurationMinutes = 60
+        )
+        val profile = CorrectionProfile.from(
+            tasks = listOf(task),
+            feedback = listOf(
+                TaskFeedbackEntity(taskId = task.id, kind = "FOCUS_TIME", value = "-2"),
+                TaskFeedbackEntity(taskId = task.id, kind = "FOCUS_TIME", value = "-1")
+            ),
+            adjustments = emptyList()
+        )
+        profile.durationMultiplier(task) shouldBe 1.09f
+    }
+
+    "repeated moved-later adjustments produce a learned preferred hour" {
+        val task = TaskEntity(
+            id = "admin-profile",
+            title = "Admin",
+            tags = "admin",
+            estimatedDurationMinutes = 30
+        )
+        val profile = CorrectionProfile.from(
+            tasks = listOf(task),
+            feedback = emptyList(),
+            adjustments = listOf(
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    newScheduledTime = 10 * 3_600_000L,
+                    source = "MANUAL",
+                    reason = "moved_later"
+                ),
+                ScheduleAdjustmentEntity(
+                    taskId = task.id,
+                    newScheduledTime = 10 * 3_600_000L,
+                    source = "MANUAL",
+                    reason = "moved_later"
+                )
+            )
+        )
+        profile.timeOfDayFit(task, 10) shouldBe 0.10f
+        profile.timeOfDayFit(task, 18) shouldBe -0.03f
+    }
+})
 
 class AutoSchedulingScenarioTest : StringSpec({
     fun dayAt(hour: Int, minute: Int = 0): Long = Calendar.getInstance().apply {
