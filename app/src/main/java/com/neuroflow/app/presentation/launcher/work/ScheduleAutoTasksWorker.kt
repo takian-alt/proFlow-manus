@@ -10,6 +10,8 @@ import com.neuroflow.app.data.local.UserPreferencesDataStore
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
 import com.neuroflow.app.data.local.dao.TaskFeedbackDao
+import com.neuroflow.app.data.local.dao.UnavailableTimeBlockDao
+import com.neuroflow.app.data.local.dao.SchedulePlanVersionDao
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.calendar.CalendarIntegrationRepository
 import com.neuroflow.app.data.repository.TaskRepository
@@ -20,6 +22,7 @@ import com.neuroflow.app.domain.repository.PeakEnergyRepository
 import com.neuroflow.app.domain.scheduler.AutoSchedulingEngine
 import com.neuroflow.app.domain.scheduler.CorrectionProfile
 import com.neuroflow.app.domain.scheduler.TaskSplitPlanner
+import com.neuroflow.app.domain.scheduler.SchedulePlanVersionCodec
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -61,7 +64,9 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
     private val autoScheduleTelemetryDao: AutoScheduleTelemetryDao,
     private val calendarIntegrationRepository: CalendarIntegrationRepository,
     private val taskFeedbackDao: TaskFeedbackDao,
-    private val scheduleAdjustmentDao: ScheduleAdjustmentDao
+    private val scheduleAdjustmentDao: ScheduleAdjustmentDao,
+    private val unavailableTimeBlockDao: UnavailableTimeBlockDao,
+    private val schedulePlanVersionDao: SchedulePlanVersionDao
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -151,7 +156,11 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
                     .flatMap { block -> buildBusySlotsForRange(block.startMillis, block.endMillis) }
                     .toSet()
             } else emptySet()
-            val busySlotStartMillis = taskBusySlotStartMillis + calendarBusySlotStartMillis
+            val unavailableBusySlotStartMillis = unavailableTimeBlockDao
+                .getOverlapping(nowMillis, nowMillis + prefs.autoSchedulingHorizonDays * 24L * 60L * 60L * 1000L)
+                .flatMap { block -> buildBusySlotsForRange(block.startMillis, block.endMillis) }
+                .toSet()
+            val busySlotStartMillis = taskBusySlotStartMillis + calendarBusySlotStartMillis + unavailableBusySlotStartMillis
 
             // 30-minute post-scheduled-end grace period threshold (30 * 60 * 1000L)
             val THIRTY_MINUTES_MILLIS = 30 * 60_000L
@@ -425,6 +434,18 @@ class ScheduleAutoTasksWorker @AssistedInject constructor(
             )
             persistTelemetry(appliedDecision)
             logTelemetry(appliedDecision)
+        }
+        if (!requiresReview && decisions.isNotEmpty()) {
+            val scheduledTasks = allTasks.mapNotNull { task ->
+                taskRepository.getById(task.id)
+            }
+            schedulePlanVersionDao.insert(
+                com.neuroflow.app.data.local.entity.SchedulePlanVersionEntity(
+                    source = "AUTO_APPLIED",
+                    summaryJson = SchedulePlanVersionCodec.encode(scheduledTasks),
+                    taskCount = scheduledTasks.count { it.scheduledDate != null && it.scheduledTime != null }
+                )
+            )
         }
     }
 
