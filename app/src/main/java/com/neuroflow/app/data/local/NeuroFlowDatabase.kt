@@ -9,6 +9,8 @@ import com.neuroflow.app.data.local.dao.EnergyPredictionDao
 import com.neuroflow.app.data.local.dao.AutoScheduleTelemetryDao
 import com.neuroflow.app.data.local.dao.ScheduleAdjustmentDao
 import com.neuroflow.app.data.local.dao.TaskFeedbackDao
+import com.neuroflow.app.data.local.dao.UnavailableTimeBlockDao
+import com.neuroflow.app.data.local.dao.SchedulePlanVersionDao
 import com.neuroflow.app.data.local.dao.GoalDao
 import com.neuroflow.app.data.local.dao.SleepLogDao
 import com.neuroflow.app.data.local.dao.TaskDao
@@ -19,6 +21,8 @@ import com.neuroflow.app.data.local.entity.EnergyPredictionEntity
 import com.neuroflow.app.data.local.entity.AutoScheduleTelemetryEntity
 import com.neuroflow.app.data.local.entity.ScheduleAdjustmentEntity
 import com.neuroflow.app.data.local.entity.TaskFeedbackEntity
+import com.neuroflow.app.data.local.entity.UnavailableTimeBlockEntity
+import com.neuroflow.app.data.local.entity.SchedulePlanVersionEntity
 import com.neuroflow.app.data.local.entity.GoalEntity
 import com.neuroflow.app.data.local.entity.SleepLogEntity
 import com.neuroflow.app.data.local.entity.TaskEntity
@@ -324,9 +328,40 @@ val MIGRATION_21_22 = object : Migration(21, 22) {
     }
 }
 
+val MIGRATION_22_23 = object : Migration(22, 23) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS unavailable_time_blocks (
+                id TEXT NOT NULL PRIMARY KEY,
+                startMillis INTEGER NOT NULL,
+                endMillis INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                createdAtMillis INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_unavailable_time_blocks_startMillis ON unavailable_time_blocks(startMillis)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_unavailable_time_blocks_endMillis ON unavailable_time_blocks(endMillis)")
+    }
+}
+
+val MIGRATION_23_24 = object : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS schedule_plan_versions (
+                id TEXT NOT NULL PRIMARY KEY,
+                createdAtMillis INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                summaryJson TEXT NOT NULL,
+                taskCount INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_schedule_plan_versions_createdAtMillis ON schedule_plan_versions(createdAtMillis)")
+    }
+}
+
 @Database(
-    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class, ScheduleAdjustmentEntity::class, TaskFeedbackEntity::class],
-    version = 22,
+    entities = [TaskEntity::class, TimeSessionEntity::class, GoalEntity::class, WoopEntity::class, UlyssesContractEntity::class, UnlockCodeEntity::class, HyperFocusSessionEntity::class, SleepLogEntity::class, EnergyPredictionEntity::class, AutoScheduleTelemetryEntity::class, ScheduleAdjustmentEntity::class, TaskFeedbackEntity::class, UnavailableTimeBlockEntity::class, SchedulePlanVersionEntity::class],
+    version = 24,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -343,4 +378,6 @@ abstract class NeuroFlowDatabase : RoomDatabase() {
     abstract fun autoScheduleTelemetryDao(): AutoScheduleTelemetryDao
     abstract fun scheduleAdjustmentDao(): ScheduleAdjustmentDao
     abstract fun taskFeedbackDao(): TaskFeedbackDao
+    abstract fun unavailableTimeBlockDao(): UnavailableTimeBlockDao
+    abstract fun schedulePlanVersionDao(): SchedulePlanVersionDao
 }

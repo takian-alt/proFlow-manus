@@ -2,6 +2,8 @@ package com.neuroflow.app.presentation.schedule
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,7 +48,7 @@ private data class HourSegment(
     val continuesToNextHour: Boolean
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ScheduleScreen(
     onNavigateToFocus: (String) -> Unit,
@@ -59,6 +61,7 @@ fun ScheduleScreen(
     var addSheetForHour by remember { mutableStateOf<Int?>(null) }
     // Task picker: which hour slot was tapped to pick an existing task
     var pickerHour by remember { mutableStateOf<Int?>(null) }
+    var actionTaskId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -170,6 +173,10 @@ fun ScheduleScreen(
                     onReschedule = viewModel::rescheduleTaskToNextBlock
                 )
             }
+            SchedulePlanHistoryCard(
+                versions = uiState.planVersions,
+                onRestore = viewModel::restorePlanVersion
+            )
             if (uiState.latestUndoableAdjustment != null) {
                 TextButton(
                     onClick = viewModel::undoLastScheduleAdjustment,
@@ -192,10 +199,38 @@ fun ScheduleScreen(
                         isCurrentHour = isToday && hour == currentHour,
                         isWorkHour = hour in uiState.workDayStart until uiState.workDayEnd,
                         onTaskClick = onNavigateToFocus,
-                        onSlotClick = { pickerHour = hour }
+                        onTaskLongClick = { actionTaskId = it },
+                        unavailableBlocks = uiState.unavailableTimeBlocks,
+                        selectedDate = uiState.selectedDate,
+                        onSlotClick = {
+                            val rowStart = uiState.selectedDate + hour * 60 * 60_000L
+                            val rowEnd = rowStart + 60 * 60_000L
+                            if (uiState.unavailableTimeBlocks.any { it.startMillis < rowEnd && it.endMillis > rowStart }) {
+                                viewModel.toggleHourUnavailable(hour)
+                            } else {
+                                pickerHour = hour
+                            }
+                        },
+                        onSlotLongClick = { viewModel.toggleHourUnavailable(hour) }
                     )
                 }
             }
+        }
+    }
+
+    actionTaskId?.let { taskId ->
+        uiState.allActiveTasks.firstOrNull { it.id == taskId }?.let { task ->
+            TaskScheduleActionSheet(
+                task = task,
+                onMoveEarlier = { viewModel.adjustScheduledTask(task, -30); actionTaskId = null },
+                onMoveLater = { viewModel.adjustScheduledTask(task, 30); actionTaskId = null },
+                onShorten = { viewModel.adjustTaskDuration(task, -30); actionTaskId = null },
+                onExtend = { viewModel.adjustTaskDuration(task, 30); actionTaskId = null },
+                onToggleLock = { viewModel.toggleTaskScheduleLock(task); actionTaskId = null },
+                onSplit = { viewModel.splitScheduledTask(task); actionTaskId = null },
+                onConvertToRecurring = { viewModel.convertTaskToRecurring(task); actionTaskId = null },
+                onDismiss = { actionTaskId = null }
+            )
         }
     }
 
@@ -336,6 +371,7 @@ private fun TaskPickerSheet(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TimelineRow(
     hour: Int,
@@ -343,7 +379,11 @@ private fun TimelineRow(
     isCurrentHour: Boolean,
     isWorkHour: Boolean,
     onTaskClick: (String) -> Unit,
-    onSlotClick: () -> Unit
+    onTaskLongClick: (String) -> Unit,
+    unavailableBlocks: List<com.neuroflow.app.data.local.entity.UnavailableTimeBlockEntity>,
+    selectedDate: Long,
+    onSlotClick: () -> Unit,
+    onSlotLongClick: () -> Unit
 ) {
     val hourStartMinute = hour * MINUTES_PER_HOUR
     val hourEndMinute = hourStartMinute + MINUTES_PER_HOUR
@@ -365,11 +405,20 @@ private fun TimelineRow(
         .sortedWith(compareBy<HourSegment>({ taskStartMinuteOfDay(it.task) }, { it.task.id }))
 
     val workHourBg = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+    val rowStart = selectedDate + hour * 60 * 60_000L
+    val rowEnd = rowStart + 60 * 60_000L
+    val isUnavailable = unavailableBlocks.any { it.startMillis < rowEnd && it.endMillis > rowStart }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .background(if (isWorkHour) workHourBg else Color.Transparent)
+            .background(
+                when {
+                    isUnavailable -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.65f)
+                    isWorkHour -> workHourBg
+                    else -> Color.Transparent
+                }
+            )
             .then(
                 if (isCurrentHour) Modifier.drawBehind {
                     drawLine(
@@ -406,11 +455,14 @@ private fun TimelineRow(
                 .weight(1f)
                 .padding(start = 4.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
                 .height(HOUR_SLOT_HEIGHT)
-                .clickable { onSlotClick() }
+                .combinedClickable(
+                    onClick = onSlotClick,
+                    onLongClick = onSlotLongClick
+                )
         ) {
             if (segments.isEmpty()) {
                 Text(
-                    "+ add",
+                    if (isUnavailable) "Unavailable · long-press to add again" else "+ add · long-press to block",
                     modifier = Modifier.align(Alignment.Center),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
@@ -448,7 +500,10 @@ private fun TimelineRow(
                                     .fillMaxWidth()
                                     .offset(y = adjustedTopOffset)
                                     .height(adjustedHeight)
-                                    .clickable { onTaskClick(segment.task.id) },
+                                    .combinedClickable(
+                                        onClick = { onTaskClick(segment.task.id) },
+                                        onLongClick = { onTaskLongClick(segment.task.id) }
+                                    ),
                                 shape = blockShape,
                                 color = getQuadrantBgColor(segment.task.quadrant)
                             ) {

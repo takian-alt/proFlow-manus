@@ -258,3 +258,16 @@ class AutoSchedulingScenarioTest : StringSpec({
         }
     }
 })
+
+
+class SchedulePlanVersionCodecTest : StringSpec({
+    "encodes and compares plan versions" {
+        val previous = "a,100,1000|b,100,2000|c,100,3000"
+        val current = "a,100,1500|b,100,2000|d,100,4000"
+        val diff = SchedulePlanVersionCodec.compare(previous, current)
+        diff.moved shouldBe setOf("a")
+        diff.unchanged shouldBe setOf("b")
+        diff.added shouldBe setOf("d")
+        diff.removed shouldBe setOf("c")
+    }
+})
